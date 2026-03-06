@@ -20,6 +20,16 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 
 ---
 
+## Project Roadmap
+
+| Phase | Weeks | Milestones |
+|-------|-------|------------|
+| **Phase 1** | 1–2 | Data exploration, preprocessing, patient-level split, baseline (Logistic Regression) |
+| **Phase 2** | 3–4 | XGBoost/LightGBM training, Optuna tuning, model selection, fairness evaluation |
+| **Phase 3** | 5–6 | Pipeline deployment, monitoring setup, documentation, final demo |
+
+---
+
 ## Repository Structure
 
 ```
@@ -29,9 +39,15 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 ├── docs/                    # Documentation and proposals
 │   ├── MLOps_Hospital_Proposal_Revised.md
 │   └── MLOps - Group Project Checkpoint Assignment.pdf
-├── notebooks/               # Analysis and exploration
-│   ├── EDA.ipynb
-│   └── EDA.md
+├── phase1/                  # Data & EDA (Weeks 1–2)
+│   ├── notebooks/           # EDA, exploration
+│   │   ├── EDA.ipynb
+│   │   └── EDA.md
+│   └── README.md
+├── phase2/                  # Modeling (Weeks 3–4)
+│   └── README.md
+├── phase3/                  # Deployment & Docs (Weeks 5–6)
+│   └── README.md
 ├── README.md
 └── .flake8
 ```
@@ -47,7 +63,7 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 - **medical_specialty** 49.1%, **payer_code** 39.6% missing — treat as "Unknown" category  
 - **5 near-zero-variance medications** — candidates for removal  
 
-See `notebooks/EDA.md` for full details.
+See `phase1/notebooks/EDA.md` for full details.
 
 ---
 
@@ -56,7 +72,7 @@ See `notebooks/EDA.md` for full details.
 1. Clone the repository  
 2. Create a virtual environment: `python -m venv .venv`  
 3. Install dependencies (see `requirements.txt` when available)  
-4. Run `notebooks/EDA.ipynb` for data exploration  
+4. Run `phase1/notebooks/EDA.ipynb` for data exploration  
 
 ---
 
