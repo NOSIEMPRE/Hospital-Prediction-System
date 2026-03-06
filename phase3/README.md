@@ -1,4 +1,4 @@
-# Phase 3 — Deployment & Docs (Weeks 5–6)
+# Phase 3 — Deployment & Docs 
 
 **Milestones:** Pipeline deployment, monitoring setup, documentation, final demo
 

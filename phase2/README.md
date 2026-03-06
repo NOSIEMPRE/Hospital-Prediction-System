@@ -1,4 +1,4 @@
-# Phase 2 — Modeling (Weeks 3–4)
+# Phase 2 — Modeling
 
 **Milestones:** XGBoost/LightGBM training, Optuna tuning, model selection, fairness evaluation
 

@@ -1,4 +1,4 @@
-# Phase 1 — Data & EDA (Weeks 1–2)
+# Phase 1 — Data & EDA
 
 **Milestones:** Data exploration, preprocessing, patient-level split, baseline (Logistic Regression)
 
