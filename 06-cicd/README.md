@@ -47,5 +47,7 @@ python -m pytest -q test_api.py
 1. Push to GitHub, wait for CI/CD to succeed
 2. Make GHCR image **public** (Packages → Settings → Danger Zone)
 3. Create Web Service on Render: "Deploy an existing image"
-4. Image URL: `ghcr.io/<owner>/<repo>:latest`
+4. Image URL: `ghcr.io/<owner>/<repo>:latest` (e.g. `ghcr.io/nosiempre/ie_mlops_group-project_team3:latest`)
 5. Verify: `curl https://<service>.onrender.com/health`
+
+**Live API:** https://hospital-readmission-risk-predictor-pcv7.onrender.com

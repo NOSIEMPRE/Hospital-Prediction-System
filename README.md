@@ -72,7 +72,10 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 | CI/CD workflow (.github/workflows/ci-cd.yml) | ✅ |
 | Lint + test + build + deploy | ✅ |
 | Deployment manifest (render.yaml) | ✅ |
+| Working online endpoint (Render) | ✅ |
 | README.md | ✅ |
+
+**Live API:** https://hospital-readmission-risk-predictor-pcv7.onrender.com
 
 ---
 
@@ -102,10 +105,19 @@ uvicorn app:app --host 0.0.0.0 --port 9696
 
 ### 4. Test API
 
+**Local:**
 ```bash
 curl http://localhost:9696/health
 curl -X POST http://localhost:9696/predict -H "Content-Type: application/json" \
-  -d '{"time_in_hospital":3,"num_lab_procedures":41,"num_procedures":0,"num_medications":8,"number_emergency":0,"number_inpatient":0,"number_outpatient":0,"number_diagnoses":9,"admission_type_id":1,"discharge_disposition_id":1,"admission_source_id":7,"age":"[50-60)","gender":"Female","change":"Ch","diabetesMed":"Yes"}'
+  -d '{"time_in_hospital":3,"num_lab_procedures":41,"num_procedures":0,"num_medications":8,"number_emergency":0,"number_inpatient":0,"number_outpatient":0,"number_diagnoses":9,"care_intensity":0,"admission_type_id":1,"discharge_disposition_id":1,"admission_source_id":7,"age":"[50-60)","gender":"Female","race":"Caucasian","change":"Ch","diabetesMed":"Yes","medication_changed":1,"A1Cresult":"not_tested","max_glu_serum":"not_tested"}'
+```
+
+**Online (Render):**
+```bash
+curl https://hospital-readmission-risk-predictor-pcv7.onrender.com/health
+curl -X POST https://hospital-readmission-risk-predictor-pcv7.onrender.com/predict \
+  -H "Content-Type: application/json" \
+  -d '{"time_in_hospital":3,"num_lab_procedures":41,"num_procedures":0,"num_medications":8,"number_emergency":0,"number_inpatient":0,"number_outpatient":0,"number_diagnoses":9,"care_intensity":0,"admission_type_id":1,"discharge_disposition_id":1,"admission_source_id":7,"age":"[50-60)","gender":"Female","race":"Caucasian","change":"Ch","diabetesMed":"Yes","medication_changed":1,"A1Cresult":"not_tested","max_glu_serum":"not_tested"}'
 ```
 
 ---
