@@ -6,12 +6,12 @@
 
 This module covers data sampling, patient-level split strategy, missing value handling, and feature engineering for the Diabetes 130-US Hospitals dataset.
 
-## Planned Contents
-
+## Contents
 
 | File | Description |
 | :--- | :--- |
-| `hospital_readmission_data_fe.ipynb` | Data sampling, feature engineering, OHE deep dive, train/val |
+| `features.ipynb` | Full feature engineering: CCS, Charlson, patient-level split, save train/val/test |
+| `hospital_readmission_data_fe.ipynb` | Data sampling, OHE deep dive, LR/XGB/LightGBM comparison |
 
 
 ## Feature Categories (from Proposal)
