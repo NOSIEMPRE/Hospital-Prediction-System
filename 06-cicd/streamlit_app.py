@@ -18,53 +18,53 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* Force light background for main content (readable in dark mode) */
-    .main, .main .block-container { 
-        background-color: #ffffff !important; 
+    .main, .main .block-container {
+        background-color: #ffffff !important;
         color: #1e293b !important;
     }
     .main .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
-    
+
     /* Base font size - larger */
-    .main p, .main span, .main label, .main .stMarkdown { 
-        font-size: 1.05rem !important; 
+    .main p, .main span, .main label, .main .stMarkdown {
+        font-size: 1.05rem !important;
         color: #1e293b !important;
     }
-    
+
     /* Header - larger, high contrast */
-    h1 { 
-        font-size: 2.2rem !important; 
+    h1 {
+        font-size: 2.2rem !important;
         font-weight: 600 !important;
         color: #0f172a !important;
         margin-bottom: 0.25rem !important;
     }
-    h2, h3 { 
-        font-size: 1.5rem !important; 
+    h2, h3 {
+        font-size: 1.5rem !important;
         color: #1e293b !important;
     }
-    
+
     /* Form labels - visible, larger */
-    .stForm label, [data-testid="stWidgetLabel"] { 
-        font-size: 1.05rem !important; 
+    .stForm label, [data-testid="stWidgetLabel"] {
+        font-size: 1.05rem !important;
         color: #334155 !important;
         font-weight: 500 !important;
     }
-    
+
     /* Input fields - light bg, dark text */
     .stForm input, .stForm select, .stSelectbox div, .stNumberInput input {
         background-color: #ffffff !important;
         color: #1e293b !important;
         font-size: 1rem !important;
     }
-    
+
     /* Section cards - light background */
-    .stForm { 
+    .stForm {
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
         padding: 1.5rem;
         border-radius: 12px;
         border: 1px solid #e2e8f0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    
+
     /* Result card */
     .result-card {
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -76,33 +76,33 @@ st.markdown("""
     }
     .result-card .risk-value { font-size: 2.8rem !important; font-weight: 700; }
     .result-card .risk-label { opacity: 0.95; font-size: 1.1rem !important; }
-    
+
     /* Sidebar - light bg, dark text */
-    [data-testid="stSidebar"] { 
-        background-color: #f8fafc !important; 
+    [data-testid="stSidebar"] {
+        background-color: #f8fafc !important;
     }
-    [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label { 
-        color: #334155 !important; 
+    [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label {
+        color: #334155 !important;
         font-size: 1.05rem !important;
     }
-    [data-testid="stSidebar"] input { 
-        background-color: #ffffff !important; 
+    [data-testid="stSidebar"] input {
+        background-color: #ffffff !important;
         color: #1e293b !important;
     }
-    
+
     /* Caption - larger */
     .stCaption { font-size: 1rem !important; color: #475569 !important; }
-    
+
     /* Subtitle - larger, readable */
     .main h1 + p, .main h1 + .element-container p { font-size: 1.2rem !important; color: #475569 !important; }
-    
+
     /* Override dark theme inputs - force light */
     div[data-testid="stSelectbox"] input, div[data-testid="stNumberInput"] input,
-    .stSelectbox > div, .stNumberInput > div { 
-        background-color: #ffffff !important; 
+    .stSelectbox > div, .stNumberInput > div {
+        background-color: #ffffff !important;
         color: #1e293b !important;
     }
-    
+
     /* Slider labels */
     .stSlider label { font-size: 1.05rem !important; color: #334155 !important; }
 </style>
