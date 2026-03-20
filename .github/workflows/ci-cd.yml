@@ -29,8 +29,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install testing tools
-        run: pip install flake8 pytest requests
+      - name: Install dependencies
+        run: pip install -r 06-cicd/requirements.txt flake8
 
       - name: Download latest trained-model artifact
         uses: actions/download-artifact@v4
@@ -43,9 +43,13 @@ jobs:
 
       - name: Lint
         working-directory: 06-cicd
-        run: flake8 . --max-line-length=100 --ignore=E501
+        run: flake8 .
 
-      - name: Build & Test Docker image
+      - name: Unit tests
+        working-directory: 06-cicd
+        run: python -m pytest -q test_train.py
+
+      - name: Build & Integration Test Docker image
         working-directory: 06-cicd
         run: |
           docker build -t hospital-readmission-app .

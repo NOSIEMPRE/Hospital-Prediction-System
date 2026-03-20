@@ -100,7 +100,7 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 ### 1. Clone and setup
 
 ```bash
-git clone https://github.com/NOSIEMPRE/IE_MLOps_Group-Project_Team3.git
+git clone https://github.com/NOSIEMPRE/Hospital-Prediction-System.git
 cd IE_MLOps_Group-Project_Team3
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate

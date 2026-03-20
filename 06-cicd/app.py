@@ -6,17 +6,36 @@ Aligns with 04/05: full FEATURE_COLS schema.
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
 import mlflow.sklearn
+import yaml
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_CONFIG_PATH = _SCRIPT_DIR / "config.yaml"
 
 RUN_ID: Optional[str] = None
 model: Optional[Any] = None
+
+
+def _load_api_config() -> dict:
+    """Load API section from config.yaml, with safe defaults."""
+    if _CONFIG_PATH.exists():
+        with open(_CONFIG_PATH) as f:
+            cfg = yaml.safe_load(f)
+        return cfg.get("api", {})
+    return {}
 
 
 class PatientRequest(BaseModel):
@@ -26,20 +45,32 @@ class PatientRequest(BaseModel):
     num_lab_procedures: int = Field(..., ge=0, description="Number of lab procedures")
     num_procedures: int = Field(..., ge=0, description="Number of procedures")
     num_medications: int = Field(..., ge=0, description="Number of medications")
-    number_emergency: int = Field(..., ge=0, description="Emergency visits (prior year)")
-    number_inpatient: int = Field(..., ge=0, description="Inpatient visits (prior year)")
-    number_outpatient: int = Field(..., ge=0, description="Outpatient visits (prior year)")
+    number_emergency: int = Field(
+        ..., ge=0, description="Emergency visits (prior year)"
+    )
+    number_inpatient: int = Field(
+        ..., ge=0, description="Inpatient visits (prior year)"
+    )
+    number_outpatient: int = Field(
+        ..., ge=0, description="Outpatient visits (prior year)"
+    )
     number_diagnoses: int = Field(..., ge=0, description="Number of diagnoses")
-    care_intensity: int = Field(..., ge=0, description="Sum of emergency+inpatient+outpatient")
+    care_intensity: int = Field(
+        ..., ge=0, description="Sum of emergency+inpatient+outpatient"
+    )
     admission_type_id: int = Field(..., ge=1, description="Admission type ID")
-    discharge_disposition_id: int = Field(..., ge=1, description="Discharge disposition ID")
+    discharge_disposition_id: int = Field(
+        ..., ge=1, description="Discharge disposition ID"
+    )
     admission_source_id: int = Field(..., ge=1, description="Admission source ID")
     age: str = Field(..., description="Age group, e.g. [50-60)")
     gender: str = Field(..., description="Gender")
     race: str = Field(..., description="Race")
     change: str = Field(default="No", description="Medication change: No, Ch, etc.")
     diabetesMed: str = Field(default="No", description="Diabetes medication: Yes, No")
-    medication_changed: int = Field(..., ge=0, le=1, description="1 if change==Ch else 0")
+    medication_changed: int = Field(
+        ..., ge=0, le=1, description="1 if change==Ch else 0"
+    )
     A1Cresult: str = Field(default="not_tested", description="HbA1c result")
     max_glu_serum: str = Field(default="not_tested", description="Max glucose serum")
 
@@ -80,24 +111,28 @@ class PredictionResponse(BaseModel):
 async def lifespan(app: FastAPI):
     global RUN_ID, model
 
-    run_id_path = Path("run_id.txt")
+    api_cfg = _load_api_config()
+    run_id_file = api_cfg.get("run_id_file", "run_id.txt")
+    model_dir = api_cfg.get("model_dir", "models/model")
+
+    run_id_path = Path(run_id_file)
     if run_id_path.exists():
         RUN_ID = run_id_path.read_text().strip()
-        print(f"[startup] Found run_id: {RUN_ID}")
+        logger.info("Found run_id: %s", RUN_ID)
     else:
-        print("[startup] run_id.txt not found – health will report 'unknown'.")
+        logger.warning("run_id.txt not found – health will report 'unknown'.")
         RUN_ID = None
 
-    model_dir = Path("models/model")
-    if model_dir.exists():
+    model_path = Path(model_dir)
+    if model_path.exists():
         try:
-            model = mlflow.sklearn.load_model(str(model_dir))
-            print(f"[startup] Model loaded from {model_dir}")
+            model = mlflow.sklearn.load_model(str(model_path))
+            logger.info("Model loaded from %s", model_path)
         except Exception as e:
-            print(f"[startup] Failed to load model: {e}")
+            logger.error("Failed to load model: %s", e)
             model = None
     else:
-        print(f"[startup] Model directory not found: {model_dir}")
+        logger.error("Model directory not found: %s", model_path)
         model = None
 
     yield
@@ -129,15 +164,25 @@ def health():
 def predict(patient: PatientRequest):
     if model is None:
         raise HTTPException(status_code=500, detail="Model not loaded. Check /health.")
-
-    feature_dict = patient.model_dump()
-    pred_proba = model.predict_proba([feature_dict])[0, 1]
-    return PredictionResponse(
-        risk_score=float(pred_proba),
-        model_version=RUN_ID or "unknown",
-    )
+    try:
+        feature_dict = patient.model_dump()
+        pred_proba = model.predict_proba([feature_dict])[0, 1]
+        return PredictionResponse(
+            risk_score=float(pred_proba),
+            model_version=RUN_ID or "unknown",
+        )
+    except Exception as e:
+        logger.error("Prediction failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=9696, reload=True)
+
+    api_cfg = _load_api_config()
+    uvicorn.run(
+        "app:app",
+        host=api_cfg.get("host", "0.0.0.0"),
+        port=api_cfg.get("port", 9696),
+        reload=True,
+    )

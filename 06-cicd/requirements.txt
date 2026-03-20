@@ -1,8 +1,9 @@
-fastapi
-uvicorn
-mlflow
-scikit-learn
-xgboost
-pandas
-requests
-streamlit
+fastapi==0.135.1
+uvicorn==0.41.0
+mlflow==3.10.1
+scikit-learn==1.8.0
+xgboost==3.2.0
+pandas==2.3.3
+requests==2.32.5
+streamlit==1.43.0
+pyyaml==6.0.3

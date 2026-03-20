@@ -1,0 +1,32 @@
+# ── Reproducibility ──────────────────────────────────────────────────────────
+seed: 42
+
+# ── Data ──────────────────────────────────────────────────────────────────────
+data:
+  # Path relative to the project root (one level above 06-cicd/)
+  path: "data/diabetic_data.csv"
+  # Rows to sample for training (null = use all rows)
+  limit: 50000
+
+# ── MLflow experiment tracking ────────────────────────────────────────────────
+mlflow:
+  # SQLite DB filename stored inside 06-cicd/
+  db: "mlflow.db"
+  experiment_name: "hospital-readmission-risk"
+
+# ── XGBoost hyperparameters ───────────────────────────────────────────────────
+model:
+  objective: "binary:logistic"
+  max_depth: 6
+  learning_rate: 0.1
+  n_estimators: 100
+  subsample: 0.8
+  colsample_bytree: 0.8
+  eval_metric: "aucpr"
+
+# ── API server ────────────────────────────────────────────────────────────────
+api:
+  host: "0.0.0.0"
+  port: 9696
+  model_dir: "models/model"
+  run_id_file: "run_id.txt"
