@@ -254,7 +254,7 @@ with st.sidebar:
 
     if st.button("⚡  Check connection", use_container_width=True):
         try:
-            r = requests.get(f"{api_url}/health", timeout=5)
+            r = requests.get(f"{api_url}/health", timeout=60)
             data = r.json()
             if data.get("model_loaded"):
                 st.success("✓  Model loaded & ready")
@@ -417,7 +417,7 @@ if "Quick Demo" in page:
         if quick_demo:
             with st.spinner("Running prediction..."):
                 try:
-                    r = requests.post(f"{api_url}/predict", json=SAMPLE, timeout=10)
+                    r = requests.post(f"{api_url}/predict", json=SAMPLE, timeout=60)
                     r.raise_for_status()
                     data = r.json()
                     render_result(data["risk_score"], data["model_version"])
@@ -562,7 +562,7 @@ else:
             }
             with st.spinner("Running prediction..."):
                 try:
-                    r = requests.post(f"{api_url}/predict", json=payload, timeout=10)
+                    r = requests.post(f"{api_url}/predict", json=payload, timeout=60)
                     r.raise_for_status()
                     data = r.json()
                     render_result(data["risk_score"], data["model_version"])
