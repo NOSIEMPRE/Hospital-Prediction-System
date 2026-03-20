@@ -16,7 +16,7 @@ mlartifacts/
 06-cicd/artifacts/model/
 
 # CI/CD: model built in workflow, not committed
-06-cicd/models/
+# 06-cicd/models/   ← included in repo for Render deployment
 06-cicd/run_id.txt
 
 # Dataset (downloaded in CI; ~18MB)
