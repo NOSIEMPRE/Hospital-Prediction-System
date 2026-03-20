@@ -221,7 +221,7 @@ button[kind="primary"] {
 </style>
 """, unsafe_allow_html=True)
 
-DEFAULT_API = "http://localhost:9696"
+DEFAULT_API = "https://hospital-prediction-system.onrender.com"
 
 # ─────────────────────────────────────────────
 # Sidebar — Navigation + API Config
