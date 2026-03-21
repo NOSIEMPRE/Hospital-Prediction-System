@@ -1,27 +1,68 @@
 # 01 – Initial Notebook
 
-**Hospital Readmission Risk Prediction** — Exploratory Data Analysis
+**Hospital Readmission Risk Prediction** — Exploratory Data Analysis & Baseline Model
+
+---
 
 ## Overview
 
-This module contains the initial exploratory data analysis (EDA) for the Diabetes 130-US Hospitals dataset. The notebook examines data structure, missing values, target distribution, and key clinical features.
+This module contains the initial EDA and a baseline Logistic Regression model for the Diabetes 130-US Hospitals dataset. It establishes the problem framing, class imbalance profile, and evaluation metrics used throughout the project.
+
+---
 
 ## Contents
 
 | File | Description |
-| :--- | :--- |
-| `hospital_readmission_prediction.ipynb` | **Initial notebook**: Load → Prepare features → Train (Logistic Regression) → Evaluate |
-| `eda_diabetes_readmission.ipynb` | EDA notebook: data loading, summary stats, visualizations |
+| ---- | ----------- |
+| `eda_diabetes_readmission.ipynb` | EDA: data loading, summary stats, missing values, target distribution, feature distributions |
+| `hospital_readmission_prediction.ipynb` | Baseline pipeline: load → preprocess → train (Logistic Regression) → evaluate |
 
-## Data Path
+---
 
-- `../data/diabetic_data.csv` — Diabetes 130-US Hospitals dataset (UCI ML Repository, id 296)
-- `../data/IDS_mapping.csv` — Admission/discharge ID mapping
+## Data
+
+| File | Location |
+| ---- | -------- |
+| Raw dataset | `../data/diabetic_data.csv` |
+| ID mapping | `../data/IDS_mapping.csv` |
+
+Download the dataset from [UCI ML Repository (id 296)](https://archive.ics.uci.edu/dataset/296) and place it in `data/` at the project root.
+
+---
 
 ## Key Findings
 
-- **101,766 encounters**, 71,518 unique patients — patient-level split required to avoid leakage
-- **11.2%** positive class (30-day readmission) — class imbalance
-- **weight** 96.9% missing — to be dropped
-- **HbA1c** 83.3% "not tested" — treat as informative category
-- **medical_specialty** 49.1%, **payer_code** 39.6% missing — treat as "Unknown" category
+| Finding | Value |
+| ------- | ----- |
+| Total encounters | 101,766 |
+| Unique patients | 71,518 |
+| Positive class (30-day readmission) | 11.2% |
+| `weight` missing | 96.9% → dropped |
+| `HbA1c` not tested | 83.3% → treated as informative category |
+| `medical_specialty` missing | 49.1% → treated as "Unknown" |
+| `payer_code` missing | 39.6% → treated as "Unknown" |
+
+Patient-level splitting is required to prevent data leakage (same patient can appear multiple times).
+
+---
+
+## Baseline Results
+
+Logistic Regression trained on one-hot encoded features:
+
+- **PR-AUC** ≈ 0.189
+- **ROC-AUC** ≈ 0.644
+- **Recall@K20** ≈ 0.35
+
+These serve as the promotion threshold in module 03 (experiment tracking).
+
+---
+
+## How to Run
+
+```bash
+cd 01-initial-notebook
+jupyter notebook
+```
+
+Open and run `eda_diabetes_readmission.ipynb` first, then `hospital_readmission_prediction.ipynb`.

@@ -1,66 +1,166 @@
-# 06 – CI/CD: Automated Training & Deployment
+# 06 – CI/CD
 
-**Hospital Readmission Risk Prediction** — End-to-end MLOps pipeline
+**Hospital Readmission Risk Prediction** — Automated training, testing, and deployment pipeline
+
+---
 
 ## Overview
 
-- **train.py** — Model training, saves to `models/model/`
-- **app.py** — FastAPI serving API
-- **Dockerfile** — Containerized service
-- **CI/CD** — GitHub Actions: train → lint → build → test → push to GHCR
+This is the production module. Every push to `main` triggers a GitHub Actions pipeline that trains the model, lints and tests the code, builds a Docker image, and pushes it to GitHub Container Registry (GHCR). The image is deployed to Render.
 
-## Workflow
+**Live API**: [hospital-readmission-risk-predictor-pcv7.onrender.com](https://hospital-readmission-risk-predictor-pcv7.onrender.com)
 
+---
+
+## Contents
+
+```text
+06-cicd/
+├── train.py           # XGBoost training, MLflow logging, writes run_id.txt + models/
+├── app.py             # FastAPI service (loads model at startup)
+├── streamlit_app.py   # Interactive test UI
+├── test_api.py        # Integration tests for /health and /predict
+├── test_train.py      # Unit tests for train.py (prepare_features, DictVectorizerWrapper, etc.)
+├── config.yaml        # Feature columns and model hyperparameters
+├── Dockerfile         # Multi-stage build for production container
+├── requirements.txt
+├── run_id.txt         # Written by train.py, read by app.py
+├── models/            # Saved MLflow model artifact
+├── .streamlit/
+│   └── config.toml    # Streamlit theme config
+└── README.md
 ```
-Git Push (main) → CI/CD Pipeline
-  1. Train model (train.yml) → artifact: run_id.txt, models/
-  2. Lint (flake8)
-  3. Build & test Docker image
-  4. Push to GHCR (ghcr.io/<owner>/<repo>:latest)
+
+---
+
+## CI/CD Pipeline
+
+```text
+git push main
+  └─ Train Model (train.yml)
+       ├─ python train.py
+       └─ Upload artifact: run_id.txt + models/
+  └─ Build, Test, and Deploy (ci-cd.yml)
+       ├─ Download trained-model artifact
+       ├─ Lint: flake8 .
+       ├─ Unit tests: pytest test_train.py
+       ├─ Build Docker image
+       ├─ Integration tests: pytest test_api.py (against running container)
+       └─ Push image to GHCR (ghcr.io/<owner>/<repo>:latest + :<sha>)
 ```
 
-## Prerequisites
+Linting uses `.flake8` at the project root (`max-line-length = 88`).
 
-**Data:** Download [Diabetes 130-US Hospitals](https://archive.ics.uci.edu/dataset/296) and place `diabetic_data.csv` in `data/` (project root).
+---
 
 ## Local Development
+
+### Setup
 
 ```bash
 cd 06-cicd
 pip install -r requirements.txt
-python train.py
-python app.py
-# In another terminal:
-python -m pytest -q test_api.py
-
-# Live test UI (Streamlit):
-streamlit run streamlit_app.py
 ```
 
-## API Endpoints
+Ensure `../data/diabetic_data.csv` exists.
 
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/` | GET | Welcome message |
-| `/health` | GET | Health check, model status |
-| `/predict` | POST | Risk score (0–1) for 30-day readmission |
+### Train + serve
 
-## Live Test (Streamlit)
+```bash
+python train.py   # trains model, writes run_id.txt and models/
+python app.py     # starts API at http://localhost:9696
+```
 
-For the Part 2 Technical Walkthrough demo, run the Streamlit UI:
+### Run tests
+
+```bash
+# Unit tests (no server needed)
+python -m pytest -q test_train.py
+
+# Integration tests (app.py must be running)
+python -m pytest -q test_api.py
+```
+
+### Streamlit UI
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
-- **Quick demo**: One-click prediction with sample patient
-- **Custom form**: Enter patient data and call `/predict`
-- **Sidebar**: Configure API URL (localhost or deployed Render URL), check health
+- **Quick demo**: one-click prediction with a sample patient
+- **Custom form**: enter patient data and call `/predict`
+- **Sidebar**: configure API URL (localhost or Render) and check health status
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+| -------- | ------ | ----------- |
+| `/` | GET | Welcome message |
+| `/health` | GET | Service status, model loaded flag, run ID |
+| `/predict` | POST | Returns `risk_score` (0–1) and `model_version` |
+| `/docs` | GET | Swagger UI |
+
+### Example
+
+```bash
+curl https://hospital-readmission-risk-predictor-pcv7.onrender.com/health
+
+curl -X POST https://hospital-readmission-risk-predictor-pcv7.onrender.com/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "time_in_hospital": 3, "num_lab_procedures": 41,
+    "num_procedures": 0, "num_medications": 8,
+    "number_emergency": 0, "number_inpatient": 0,
+    "number_outpatient": 0, "number_diagnoses": 9,
+    "care_intensity": 0, "admission_type_id": 1,
+    "discharge_disposition_id": 1, "admission_source_id": 7,
+    "age": "[50-60)", "gender": "Female", "race": "Caucasian",
+    "change": "Ch", "diabetesMed": "Yes",
+    "medication_changed": 1,
+    "A1Cresult": "not_tested", "max_glu_serum": "not_tested"
+  }'
+```
+
+---
+
+## Docker
+
+### Build and run locally
+
+```bash
+docker build -t hospital-readmission-app .
+docker run -p 9696:9696 hospital-readmission-app
+```
+
+### Pull from GHCR
+
+```bash
+docker pull ghcr.io/nosiempre/hospital-prediction-system:latest
+docker run -p 9696:9696 ghcr.io/nosiempre/hospital-prediction-system:latest
+```
+
+---
 
 ## Deploy to Render
 
-1. Push to GitHub, wait for CI/CD to succeed
-2. Make GHCR image **public** (Packages → Settings → Danger Zone)
-3. Create Web Service on Render: "Deploy an existing image"
-4. Image URL: `ghcr.io/<owner>/<repo>:latest`
-5. Verify: `curl https://<service>.onrender.com/health`
+1. Ensure CI/CD has run successfully and the image is in GHCR
+2. Make the package **public**: GitHub → Packages → Settings → Change visibility
+3. On Render: New Web Service → "Deploy an existing image"
+4. Image URL: `ghcr.io/nosiempre/hospital-prediction-system:latest`
+5. Port: `9696`
+6. Verify: `curl https://<your-service>.onrender.com/health`
+
+The `render.yaml` at the project root automates this configuration.
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+| ----- | --- |
+| `run_id.txt not found` | Run `python train.py` first |
+| `models/` directory missing | Run `python train.py` — it creates the artifact |
+| Render cold start slow | First request may take 30–60s; subsequent requests are fast |
+| Lint fails locally | Run `flake8 .` from `06-cicd/` to see all violations |

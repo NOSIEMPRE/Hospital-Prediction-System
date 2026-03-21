@@ -1,96 +1,104 @@
-# 05 – Monitoring: Train → Serve → Simulate → Drift Detection
+# 05 – Monitoring
 
-Complete MLOps loop: train → serve → simulate production traffic → monitor drift.
+**Hospital Readmission Risk Prediction** — Production drift detection with Evidently
 
 ---
 
-## Folder Structure
+## Overview
 
-```
+This module extends module 04 with a full MLOps monitoring loop: train → serve → simulate production traffic → detect data drift and performance degradation. Reports are generated with Evidently.
+
+---
+
+## Contents
+
+```text
 05-monitoring/
-├── train.py       # Train & log to MLflow, create run_id.txt
-├── app.py         # FastAPI service
-├── simulate.py    # Simulates predictions → data/predictions.csv
-├── monitor.py     # Evidently drift report → monitoring_report.html
-├── test_api.py    # API tests
+├── train.py              # Train & log to MLflow, write run_id.txt
+├── app.py                # FastAPI service (logs each prediction to data/predictions.csv)
+├── simulate.py           # Calls /predict ~100 times with real patient data
+├── monitor.py            # Generates Evidently drift + classification report
+├── test_api.py           # Pytest integration tests
+├── data/
+│   └── predictions.csv   # Created by simulate.py
+├── monitoring_report.html # Created by monitor.py
 └── README.md
 ```
 
 ---
 
-## 1. Train the Model
+## Setup
 
 ```bash
 cd 05-monitoring
-python train.py
+pip install -r requirements.txt
+pip install evidently   # only needed for monitor.py
 ```
 
 Ensure `../data/diabetic_data.csv` exists.
 
 ---
 
-## 2. Start the API
+## Usage
+
+### 1. Train
+
+```bash
+python train.py
+```
+
+### 2. Start API
 
 ```bash
 python app.py
 ```
 
-Service: http://localhost:9696
+API runs at [http://localhost:9696](http://localhost:9696). Each `/predict` call appends a row to `data/predictions.csv`.
 
----
-
-## 3. Simulate Production Traffic
+### 3. Simulate production traffic
 
 In a **new terminal** (API must be running):
 
 ```bash
-cd 05-monitoring
 python simulate.py
 ```
 
-- Calls `/predict` ~100 times with real hospital data
-- Logs predictions + ground truth to `data/predictions.csv`
+Calls `/predict` ~100 times using real hospital records, logging predictions and ground truth to `data/predictions.csv`.
 
----
-
-## 4. Generate Monitoring Report
+### 4. Generate drift report
 
 ```bash
-pip install evidently
 python monitor.py
 ```
 
-- Loads `data/predictions.csv`
-- Splits into reference (older) vs current (newer)
-- Generates Evidently report: **Data Drift** + **Classification Performance**
-- Saves `monitoring_report.html`
+Splits `predictions.csv` into reference (older half) vs. current (newer half), then generates `monitoring_report.html` with:
+
+- **Data Drift**: input feature distribution shifts
+- **Classification Performance**: confusion matrix, precision, recall, F1, ROC-AUC
+
+### 5. View report
+
+Open `monitoring_report.html` in any browser.
 
 ---
 
-## 5. View Results
-
-- Open `monitoring_report.html` in your browser
-- Data drift: input feature distributions
-- Classification: confusion matrix, precision, recall, F1, ROC AUC
-
----
-
-## Quick Commands
+## Quick Reference
 
 | Action | Command |
-|--------|---------|
+| ------ | ------- |
 | Train | `python train.py` |
-| Run API | `python app.py` |
-| Simulate | `python simulate.py` |
-| Monitor | `python monitor.py` |
-| Test API | `python -m pytest -q test_api.py` |
+| Start API | `python app.py` |
+| Simulate traffic | `python simulate.py` |
+| Generate report | `python monitor.py` |
+| Run API tests | `python -m pytest -q test_api.py` |
 
 ---
 
 ## Troubleshooting
 
 | Issue | Fix |
-|-------|-----|
-| No predictions logged | Run `app.py` before `simulate.py` |
-| `FileNotFoundError` in monitor | Run `simulate.py` first |
+| ----- | --- |
+| `predictions.csv` empty | Run `app.py` before `simulate.py` |
+| `FileNotFoundError` in monitor | Run `simulate.py` first to generate `predictions.csv` |
 | `ModuleNotFoundError: evidently` | `pip install evidently` |
+| API not responding | Ensure `python app.py` is running |

@@ -1,33 +1,64 @@
 # 03 – Experiment Tracking
 
-**Hospital Readmission Risk Prediction** — MLflow experiment tracking
+**Hospital Readmission Risk Prediction** — MLflow experiment tracking and model selection
+
+---
 
 ## Overview
 
-This module uses MLflow for experiment tracking, model versioning, and metrics logging. Per proposal 4.2–4.5: Logistic Regression is the baseline; XGBoost/LightGBM are tuned with Optuna. A model is promoted only if validation PR-AUC exceeds the baseline.
+This module uses MLflow (local SQLite backend) for experiment tracking, model versioning, and metrics logging. Logistic Regression is the baseline; XGBoost and LightGBM are tuned with Optuna. A challenger model is promoted to the Model Registry only if its validation PR-AUC exceeds the baseline.
+
+---
 
 ## Contents
 
 | File | Description |
-| :--- | :--- |
-| `scenario-1.ipynb` | Baseline (Logistic Regression) — local SQLite (`mlflow.db`) |
-| `scenario-2.ipynb` | XGBoost/LightGBM + Optuna — connects to scenario-1 UI (port 5001) |
+| ---- | ----------- |
+| `scenario-1.ipynb` | Baseline: Logistic Regression, logs to local `mlflow.db`, launches UI on port 5001 |
+| `scenario-2.ipynb` | Challenger: XGBoost + LightGBM + Optuna, connects to scenario-1's tracking server |
 
-## How to Run
-
-### Scenario 1 (Baseline)
-1. Ensure `../data/diabetic_data.csv` exists.
-2. Run all cells in `scenario-1.ipynb`.
-3. Baseline metrics (example): PR-AUC ≈ 0.189, ROC-AUC ≈ 0.644, Recall@K20 ≈ 0.35.
-4. **Launch MLflow UI** (last cell) — http://localhost:5001. Keep it running for scenario-2.
-
-### Scenario 2 (Optuna + Champion)
-1. **Run scenario-1 first** and launch the MLflow UI (port 5001) — scenario-2 connects to it.
-2. Run all cells in `scenario-2.ipynb`. `BASELINE_PR_AUC` is set to 0.189 (from scenario-1).
-3. Champion is registered to Model Registry only if PR-AUC > baseline.
+---
 
 ## Metrics
 
-- **PR-AUC** — Primary metric for model selection (class imbalance)
-- **Recall at K** — Operational metric (care coordinator capacity; K=20%)
-- **ROC-AUC** — Model selection across thresholds
+| Metric | Purpose |
+| ------ | ------- |
+| **PR-AUC** | Primary model selection metric (handles class imbalance) |
+| **ROC-AUC** | Secondary threshold-free metric |
+| **Recall@K20** | Operational metric — fraction of true readmissions captured in top 20% of predictions |
+
+---
+
+## How to Run
+
+### Scenario 1 — Baseline
+
+```bash
+cd 03-experiment-tracking
+# Ensure ../data/diabetic_data.csv exists
+jupyter notebook scenario-1.ipynb
+```
+
+Run all cells. The last cell starts the MLflow UI at [http://localhost:5001](http://localhost:5001) — **keep it running**.
+
+Baseline results: PR-AUC ≈ 0.189, ROC-AUC ≈ 0.644, Recall@K20 ≈ 0.35.
+
+### Scenario 2 — Optuna Tuning + Champion Selection
+
+```bash
+# In a new terminal (scenario-1 UI must be running on port 5001)
+jupyter notebook scenario-2.ipynb
+```
+
+Run all cells. `BASELINE_PR_AUC = 0.189` is the promotion threshold. The best challenger is registered to the MLflow Model Registry only if it beats the baseline.
+
+---
+
+## MLflow Artifacts
+
+| Path | Contents |
+| ---- | -------- |
+| `mlflow.db` | Local SQLite tracking store |
+| `mlruns/` | Run artifacts (models, metrics, params) |
+| `mlartifacts/` | Registered model artifacts |
+| `confusion_matrix_*.png` | Champion model confusion matrix |
