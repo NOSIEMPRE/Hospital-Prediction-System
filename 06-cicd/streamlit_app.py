@@ -118,7 +118,7 @@ with st.sidebar:
     
     if st.button("Check API Connection", use_container_width=True):
         try:
-            r = requests.get(f"{api_url}/health", timeout=5)
+            r = requests.get(f"{api_url}/health", timeout=120)
             data = r.json()
             if data.get("model_loaded"):
                 st.success("🟢 API Online & Model Loaded")
@@ -220,7 +220,7 @@ with tab1:
         
         with st.spinner("Analyzing patient data via ML API..."):
             try:
-                r = requests.post(f"{api_url}/predict", json=payload, timeout=5)
+                r = requests.post(f"{api_url}/predict", json=payload, timeout=120)
                 # If we get a 422, let's catch it nicely to explain why
                 if r.status_code == 422:
                     st.error(f"API rejected the data format. Detail: {r.text}")
@@ -272,7 +272,7 @@ with tab2:
                         payload["medication_changed"] = 1 if payload.get("change") == "Ch" else 0
                         
                         try:
-                            resp = requests.post(f"{api_url}/predict", json=payload, timeout=5)
+                            resp = requests.post(f"{api_url}/predict", json=payload, timeout=120)
                             score = resp.json().get("risk_score", None)
                             results.append(score)
                         except:
