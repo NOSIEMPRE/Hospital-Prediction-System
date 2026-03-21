@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r 06-cicd/requirements.txt flake8
 
+      - name: Remove committed model (replaced by CI-trained artifact)
+        run: rm -rf 06-cicd/models 06-cicd/run_id.txt
+
       - name: Download latest trained-model artifact
         uses: actions/download-artifact@v4
         with:
@@ -39,7 +42,13 @@ jobs:
           path: .
 
       - name: Verify downloaded artifact
-        run: ls -R 06-cicd
+        run: |
+          echo "=== 06-cicd/ top-level ==="
+          ls -la 06-cicd/
+          echo "=== models/ ==="
+          ls -R 06-cicd/models
+          echo "=== run_id.txt ==="
+          cat 06-cicd/run_id.txt
 
       - name: Lint
         working-directory: 06-cicd
