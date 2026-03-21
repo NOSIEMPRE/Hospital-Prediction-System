@@ -10,439 +10,463 @@ from pathlib import Path
 import pandas as pd
 import requests
 import streamlit as st
+import plotly.graph_objects as go
 
-# Configure the page natively for a clean, app-like feel
 st.set_page_config(
     page_title="Readmission Dashboard",
-    page_icon="🧊",
+    page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ─────────────────────────────────────────────
-# PREMIUM DARK GLASSMORPHISM CSS
+# PREMIUM CLINICAL NAVY CSS (Matched to design)
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-}
-
-/* Deep dynamic dark background */
-.stApp {
-    background: radial-gradient(circle at 15% 50%, #1e1b4b, #0f172a 40%, #020617 100%);
-    background-attachment: fixed;
     color: #e2e8f0;
 }
 
-/* Headers */
-.main-header {
-    font-size: 2.5rem;
-    font-weight: 800;
-    background: -webkit-linear-gradient(45deg, #38bdf8, #818cf8, #c084fc);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.2rem;
-    letter-spacing: -0.02em;
-}
-.sub-header {
-    font-size: 1.1rem;
-    color: #94a3b8;
-    margin-bottom: 2rem;
-    font-weight: 400;
+/* Deep Warm Navy Background */
+.stApp {
+    background-color: #0b1121;
 }
 
-/* Glassmorphism containers replacing native borders */
-div[data-testid="stVerticalBlock"] > div[style*="border"] {
-    background: rgba(30, 41, 59, 0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
-    padding: 1.5rem !important;
-}
-
-/* Neon primary buttons */
-.stFormSubmitButton button, button[kind="primary"] {
-    background: linear-gradient(90deg, #0ea5e9 0%, #6366f1 100%) !important;
-    color: white !important;
-    border-radius: 10px !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    padding: 0.6rem 2rem !important;
-    border: none !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
-}
-.stFormSubmitButton button:hover, button[kind="primary"]:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6) !important;
-}
-
-/* Inputs styling for dark mode */
-.stSelectbox > div > div, .stNumberInput > div > div, .stTextInput > div > div {
-    background-color: rgba(15, 23, 42, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: #f8fafc !important;
-    border-radius: 8px !important;
-}
-label {
-    color: #cbd5e1 !important;
-    font-weight: 500 !important;
-}
-
-/* Sidebar styling */
+/* Sidebar Styling */
 [data-testid="stSidebar"] {
-    background: rgba(15, 23, 42, 0.7) !important;
-    backdrop-filter: blur(20px) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background-color: #0f1627 !important;
+    border-right: 1px solid #1e293b !important;
 }
 
-/* Gorgeous neon metrics */
-div[data-testid="stMetricValue"] {
-    font-size: 3rem;
-    font-weight: 800;
+/* Hide native top padding */
+.block-container {
+    padding-top: 2rem !important;
+}
+
+/* Hide up/down stepper arrows on number inputs to look modern */
+[data-testid="stNumberInputStepUp"], [data-testid="stNumberInputStepDown"] {
+    display: none !important;
+}
+
+/* Inputs styling - matching the screenshot */
+.stSelectbox > div > div, .stTextInput > div > div, .stNumberInput > div > div {
+    background-color: #1a243a !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
     color: #f8fafc !important;
-    text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
-}
-div[data-testid="stMetricLabel"] {
-    font-size: 0.95rem;
-    color: #94a3b8 !important;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    border-radius: 6px !important;
+    font-size: 0.95rem !important;
+    padding-left: 0.5rem !important;
+    box-shadow: none !important;
 }
 
-/* Tab styling overrides */
-.stTabs [data-baseweb="tab-list"] {
-    background: transparent;
-    border-bottom: 2px solid rgba(255,255,255,0.05) !important;
-}
-.stTabs [data-baseweb="tab"] {
+/* Uppercase minimal labels */
+label {
+    text-transform: uppercase !important;
+    font-size: 0.70rem !important;
+    letter-spacing: 0.06em !important;
     color: #64748b !important;
     font-weight: 600 !important;
+    margin-bottom: -0.2rem !important;
 }
-.stTabs [aria-selected="true"] {
-    color: #38bdf8 !important;
-    border-bottom: 3px solid #38bdf8 !important;
+
+/* Custom Section Headers */
+.section-header {
+    display: flex; 
+    align-items: center; 
+    border-bottom: 1px solid #1e293b; 
+    padding-bottom: 0.6rem; 
+    margin-top: 1.5rem; 
+    margin-bottom: 1rem;
 }
-hr {
-    border-color: rgba(255,255,255,0.1) !important;
+.circle-num {
+    background: rgba(13, 148, 136, 0.1); 
+    color: #14b8a6; 
+    border: 1px solid rgba(20, 184, 166, 0.3); 
+    border-radius: 50%; 
+    min-width: 24px; 
+    height: 24px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 0.75rem; 
+    font-weight: 700; 
+    margin-right: 0.8rem;
+}
+.section-title { font-size: 1.05rem; font-weight: 600; color: #f8fafc; flex-grow: 1; margin: 0; }
+.section-desc { font-size: 0.75rem; color: #64748b; font-weight: 400; margin: 0; text-align: right;}
+
+/* Header Dashboard Bar */
+.top-bar-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+.top-title { font-size: 1.5rem; font-weight: 600; margin: 0; color: #f8fafc; letter-spacing: -0.02em;}
+.top-subtitle { font-size: 0.85rem; color: #64748b; margin: 0; margin-top:0.2rem;}
+.status-pill {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.status-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10b981;
+}
+.status-pill-offline {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+.status-pill-offline::before { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+/* Primary Buttons */
+.stFormSubmitButton button, button[kind="primary"] {
+    background: rgba(13, 148, 136, 0.1) !important;
+    color: #14b8a6 !important;
+    border: 1px solid rgba(20, 184, 166, 0.5) !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 2.5rem !important;
+    transition: all 0.2s ease !important;
+}
+.stFormSubmitButton button:hover, button[kind="primary"]:hover {
+    background: #14b8a6 !important;
+    color: #0b1121 !important;
+}
+
+/* Custom Risk Bar */
+.risk-bar-container {
+    background: #1a243a;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+.risk-track {
+    flex-grow: 1;
+    height: 6px;
+    background: #0f1627;
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+}
+.risk-fill {
+    position: absolute; left: 0; top: 0; height: 100%;
+    background: linear-gradient(90deg, #14b8a6, #eab308, #ef4444);
+    border-radius: 3px;
+    transition: width 0.5s ease-in-out;
+}
+.risk-labels {
+    display: flex; justify-content: space-between;
+    font-size: 0.65rem; color: #64748b; font-weight: 600;
+    margin-top: 0.5rem; text-transform: uppercase;
+}
+.risk-label-main { font-size: 0.85rem; color: #94a3b8; width: 150px; }
+.risk-status-button {
+    background: #0f1627;
+    color: #14b8a6;
+    border: 1px solid #1e293b;
+    padding: 0.4rem 1.2rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 </style>
 """, unsafe_allow_html=True)
 
-DEFAULT_API = "http://localhost:9696" # Defaulting to local so we hit the NEW code
+DEFAULT_API = "http://localhost:9696" 
 CLOUD_API = "https://hospital-readmission-risk-predictor-pcv7.onrender.com"
 PREDICTION_LOG = Path(__file__).resolve().parent / "data" / "predictions.log"
 
 # ─────────────────────────────────────────────
-# Sidebar 
+# STATE INIT
 # ─────────────────────────────────────────────
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2966/2966327.png", width=60)
-    st.markdown("## MLOps Admin")
-    st.caption("v2.0 Enterprise Dashboard")
-    st.divider()
-    
-    st.markdown("**API Settings**")
-    
-    # Toggle between Local and Cloud
-    api_choice = st.radio("Environment", ["Local (New API)", "Cloud (Old API)"], index=0)
-    if "Local" in api_choice:
-        api_url = st.text_input("API URL", value=DEFAULT_API)
-    else:
-        api_url = st.text_input("API URL", value=CLOUD_API)
+if "api_url" not in st.session_state:
+    st.session_state.api_url = DEFAULT_API
+if "api_online" not in st.session_state:
+    st.session_state.api_online = False
+if "api_version" not in st.session_state:
+    st.session_state.api_version = "Checking..."
+if "last_score" not in st.session_state:
+    st.session_state.last_score = None
+if "last_shap" not in st.session_state:
+    st.session_state.last_shap = None
 
-    st.divider()
-    api_status = "Unknown"
-    api_version = "Unknown"
+# Check API health automatically
+try:
+    r = requests.get(f"{st.session_state.api_url}/health", timeout=2)
+    data = r.json()
+    st.session_state.api_online = data.get("model_loaded", False)
+    st.session_state.api_version = data.get("run_id", "Unknown")[:8]
+except:
+    st.session_state.api_online = False
+
+def render_top_bar():
+    pill_class = "status-pill" if st.session_state.api_online else "status-pill status-pill-offline"
+    pill_text = f"Model online - [{st.session_state.api_version}]" if st.session_state.api_online else "Model offline - Action required"
+    st.markdown(f"""
+    <div class="top-bar-container">
+        <div>
+            <h1 class="top-title">Hospital Readmission System</h1>
+            <p class="top-subtitle">AI-Powered Risk Assessment & System Telemetry</p>
+        </div>
+        <div class="{pill_class}">{pill_text}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# PAGE 1: PATIENT INTAKE
+# ─────────────────────────────────────────────
+def page_intake():
+    render_top_bar()
     
-    if st.button("Check API Connection", use_container_width=True):
-        try:
-            r = requests.get(f"{api_url}/health", timeout=120)
-            data = r.json()
-            if data.get("model_loaded"):
-                st.success("🟢 API Online & Model Loaded")
-                api_status = "Online"
-                api_version = data.get("run_id", "Not tracked")
-            else:
-                st.warning("🟡 API Online, Model Missing")
-        except Exception as e:
-            st.error(f"🔴 Connection Failed: {e}")
+    # Custom Risk Bar visualization (from the screenshot)
+    score_pct = (st.session_state.last_score * 100) if st.session_state.last_score else 0
+    status_text = "Awaiting input"
+    status_color = "#64748b"
+    if st.session_state.last_score is not None:
+        if st.session_state.last_score > 0.6:
+            status_text = "High Risk"
+            status_color = "#ef4444"
+        elif st.session_state.last_score > 0.3:
+            status_text = "Moderate"
+            status_color = "#eab308"
+        else:
+            status_text = "Low Risk"
+            status_color = "#14b8a6"
             
-    if api_status == "Online":
-        st.info(f"**Model Run ID:**\n`{api_version[:8]}`")
+    st.markdown(f"""
+    <div class="risk-bar-container">
+        <div class="risk-label-main">Readmission risk score</div>
+        <div style="flex-grow: 1;">
+            <div class="risk-track">
+                <div class="risk-fill" style="width: {score_pct}%;"></div>
+            </div>
+            <div class="risk-labels"><span>Low</span><span>Moderate</span><span>High</span></div>
+        </div>
+        <div class="risk-status-button" style="color: {status_color}; border-color: {status_color}40;">{status_text}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
+    with st.form("patient_form", border=False):
+        # SECTION 1
+        st.markdown("""
+        <div class="section-header">
+            <div class="circle-num">1</div><p class="section-title">Demographics</p><p class="section-desc">Patient classification</p>
+        </div>
+        """, unsafe_allow_html=True)
+        r1c1, r1c2, r1c3 = st.columns(3)
+        with r1c1: 
+            age = st.selectbox("Age group", ["[0-10)", "[10-20)", "[20-30)", "[30-40)", "[40-50)", "[50-60)", "[60-70)", "[70-80)", "[80-90)", "[90-100)"], index=5)
+            admission_type_id = st.number_input("Admission Type ID", min_value=1, max_value=8, value=1)
+        with r1c2: 
+            gender = st.selectbox("Gender", ["Female", "Male", "Unknown", "Unknown/Invalid"])
+            discharge_disposition_id = st.number_input("Discharge ID", min_value=1, max_value=30, value=1)
+        with r1c3: 
+            race = st.selectbox("Race", ["Caucasian", "AfricanAmerican", "Asian", "Hispanic", "Other", "Unknown"])
+            admission_source_id = st.number_input("Source ID", min_value=1, max_value=25, value=7)
 
-# ─────────────────────────────────────────────
-# MAIN PAGE
-# ─────────────────────────────────────────────
-st.markdown('<div class="main-header">Hospital Readmission System</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">AI-Powered Risk Assessment & System Telemetry</div>', unsafe_allow_html=True)
-
-tab1, tab2, tab3 = st.tabs(["👤 Patient Intake", "📂 Batch Processing", "📈 System Monitoring"])
-
-# =====================================================================
-# TAB 1: INDIVIDUAL PATIENT INTAKE
-# =====================================================================
-with tab1:
-    with st.container(border=True):
-        st.subheader("Patient Clinical Profile")
-        st.caption("Enter patient details below to assess 30-day readmission risk.")
+        # SECTION 2
+        st.markdown("""
+        <div class="section-header">
+            <div class="circle-num">2</div><p class="section-title">Hospital Visits & Procedures</p><p class="section-desc">Utilisation data</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown('<label>Days in hospital</label>', unsafe_allow_html=True)
+        time_in_hospital = st.slider("", 1, 14, 3, label_visibility="collapsed")
         
-        with st.form("patient_form", border=False):
-            st.markdown("##### 1. Demographics")
-            r1c1, r1c2, r1c3 = st.columns(3)
-            with r1c1: 
-                age = st.selectbox("Age group", ["[0-10)", "[10-20)", "[20-30)", "[30-40)", "[40-50)", "[50-60)", "[60-70)", "[70-80)", "[80-90)", "[90-100)"], index=5)
-                admission_type_id = st.number_input("Admission Type ID", min_value=1, max_value=8, value=1)
-            with r1c2: 
-                gender = st.selectbox("Gender", ["Female", "Male", "Unknown", "Unknown/Invalid"])
-                discharge_disposition_id = st.number_input("Discharge ID", min_value=1, max_value=30, value=1)
-            with r1c3: 
-                race = st.selectbox("Race", ["Caucasian", "AfricanAmerican", "Asian", "Hispanic", "Other", "Unknown"])
-                admission_source_id = st.number_input("Source ID", min_value=1, max_value=25, value=7)
+        r2c1, r2c2, r2c3, r2c4 = st.columns(4)
+        with r2c1: 
+            num_lab_procedures = st.number_input("Lab procedures", min_value=0, value=41)
+            number_emergency = st.number_input("Emergency visits", min_value=0, value=0)
+        with r2c2: 
+            num_procedures = st.number_input("Other procedures", min_value=0, value=0)
+            number_inpatient = st.number_input("Inpatient visits", min_value=0, value=0)
+        with r2c3: 
+            num_medications = st.number_input("Medications", min_value=0, value=8)
+            number_outpatient = st.number_input("Outpatient visits", min_value=0, value=0)
+        with r2c4:
+            number_diagnoses = st.number_input("Diagnoses", min_value=0, value=9)
 
-            st.divider()
-            st.markdown("##### 2. Hospital Visits & Procedures")
-            r2c1, r2c2, r2c3, r2c4 = st.columns(4)
-            with r2c1: 
-                time_in_hospital = st.slider("Days in hospital", 1, 14, 3)
-                number_emergency = st.number_input("Emergency visits", min_value=0, value=0)
-            with r2c2: 
-                num_lab_procedures = st.number_input("Lab procedures", min_value=0, value=41)
-                number_inpatient = st.number_input("Inpatient visits", min_value=0, value=0)
-            with r2c3: 
-                num_procedures = st.number_input("Other procedures", min_value=0, value=0)
-                number_outpatient = st.number_input("Outpatient visits", min_value=0, value=0)
-            with r2c4:
-                num_medications = st.number_input("Medications", min_value=0, value=8)
-                number_diagnoses = st.number_input("Diagnoses", min_value=0, value=9)
+        # SECTION 3
+        st.markdown("""
+        <div class="section-header">
+            <div class="circle-num">3</div><p class="section-title">Lab Results & Diabetes</p><p class="section-desc">Clinical indicators</p>
+        </div>
+        """, unsafe_allow_html=True)
+        r3c1, r3c2, r3c3, r3c4 = st.columns(4)
+        with r3c1: change = st.selectbox("Medication change", ["No", "Ch"], index=1)
+        with r3c2: diabetesMed = st.selectbox("Diabetes medication", ["No", "Yes"], index=1)
+        with r3c3: A1Cresult = st.selectbox("HbA1c result", ["not_tested", "None", "Norm", ">7", ">8"])
+        with r3c4: max_glu_serum = st.selectbox("Max glucose", ["not_tested", "None", "Norm", ">200", ">300"])
 
-            st.divider()
-            st.markdown("##### 3. Lab Results & Diabetes")
-            r3c1, r3c2, r3c3, r3c4 = st.columns(4)
-            with r3c1: change = st.selectbox("Medication change", ["No", "Ch"], index=1)
-            with r3c2: diabetesMed = st.selectbox("Diabetes medication", ["No", "Yes"], index=1)
-            with r3c3: A1Cresult = st.selectbox("HbA1c result", ["not_tested", "None", "Norm", ">7", ">8"])
-            with r3c4: max_glu_serum = st.selectbox("Max glucose", ["not_tested", "None", "Norm", ">200", ">300"])
-
-            st.write("")
-            submitted = st.form_submit_button("Assess Readmission Risk", use_container_width=True)
+        st.write("")
+        c1, c2, c3 = st.columns([1,1,2])
+        with c1: submitted = st.form_submit_button("Assess Risk", use_container_width=True)
 
     if submitted:
-        # Calculate derived features required by the OLD API (Render) 
-        # so this UI works flawlessly with both the old and new backends
-        care_intensity = number_emergency + number_inpatient + number_outpatient
-        medication_changed = 1 if change == "Ch" else 0
-
         payload = {
-            "time_in_hospital": time_in_hospital,
-            "num_lab_procedures": num_lab_procedures,
-            "num_procedures": num_procedures,
-            "num_medications": num_medications,
-            "number_emergency": number_emergency,
-            "number_inpatient": number_inpatient,
-            "number_outpatient": number_outpatient,
-            "number_diagnoses": number_diagnoses,
-            "care_intensity": care_intensity,
-            "admission_type_id": admission_type_id,
-            "discharge_disposition_id": discharge_disposition_id,
-            "admission_source_id": admission_source_id,
-            "age": age,
-            "gender": gender,
-            "race": race,
-            "change": change,
-            "diabetesMed": diabetesMed,
-            "medication_changed": medication_changed,
-            "A1Cresult": A1Cresult,
-            "max_glu_serum": max_glu_serum,
+            "time_in_hospital": time_in_hospital, "num_lab_procedures": num_lab_procedures,
+            "num_procedures": num_procedures, "num_medications": num_medications,
+            "number_emergency": number_emergency, "number_inpatient": number_inpatient,
+            "number_outpatient": number_outpatient, "number_diagnoses": number_diagnoses,
+            "care_intensity": number_emergency + number_inpatient + number_outpatient,
+            "admission_type_id": admission_type_id, "discharge_disposition_id": discharge_disposition_id,
+            "admission_source_id": admission_source_id, "age": age, "gender": gender,
+            "race": race, "change": change, "diabetesMed": diabetesMed,
+            "medication_changed": 1 if change == "Ch" else 0,
+            "A1Cresult": A1Cresult, "max_glu_serum": max_glu_serum,
         }
         
-        with st.spinner("Analyzing patient data via ML API..."):
+        with st.spinner("Analyzing patient clinical profile..."):
             try:
-                r = requests.post(f"{api_url}/predict", json=payload, timeout=120)
-                if r.status_code == 422:
-                    st.error(f"API rejected the data format. Detail: {r.text}")
-                else:
-                    r.raise_for_status()
-                    data = r.json()
-                    score = data["risk_score"]
-                    shap_values = data.get("shap_values")
-                    base_value = data.get("base_value", 0.5)
-                    
-                    st.markdown("---")
-                    st.subheader("Analysis Complete")
-                    
-                    import plotly.graph_objects as go
-                    
-                    # 1. Gauge Chart for Risk Score
-                    fig_gauge = go.Figure(go.Indicator(
-                        mode="gauge+number",
-                        value=score * 100,
-                        number={'suffix': "%", 'font': {'size': 50, 'color': '#f8fafc'}},
-                        title={'text': "30-Day Readmission Risk", 'font': {'size': 20, 'color': '#94a3b8'}},
-                        gauge={
-                            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "rgba(255,255,255,0.2)"},
-                            'bar': {'color': "#38bdf8"}, # Neon blue fill
-                            'bgcolor': "rgba(0,0,0,0.3)",
-                            'borderwidth': 2,
-                            'bordercolor': "rgba(255,255,255,0.1)",
-                            'steps': [
-                                {'range': [0, 30], 'color': "rgba(34, 197, 94, 0.2)"},   # faint green
-                                {'range': [30, 60], 'color': "rgba(234, 179, 8, 0.2)"},  # faint yellow
-                                {'range': [60, 100], 'color': "rgba(239, 68, 68, 0.2)"}   # faint red
-                            ],
-                            'threshold': {
-                                'line': {'color': "#ef4444", 'width': 4},
-                                'thickness': 0.75,
-                                'value': 60
-                            }
-                        }
-                    ))
-                    fig_gauge.update_layout(
-                        height=350, 
-                        margin=dict(l=20, r=20, t=50, b=20),
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)'
-                    )
-                    
-                    # 2. SHAP Waterfall Chart
-                    fig_shap = None
-                    if shap_values:
-                        sorted_shap = sorted(shap_values.items(), key=lambda x: abs(x[1]))[-8:]
-                        features = [k for k, v in sorted_shap]
-                        impacts = [v for k, v in sorted_shap]
-                        
-                        fig_shap = go.Figure(go.Waterfall(
-                            x=impacts,
-                            y=features,
-                            orientation="h",
-                            measure=["relative"] * len(features),
-                            base=0,
-                            decreasing={"marker": {"color": "#22c55e"}}, # vibrant green
-                            increasing={"marker": {"color": "#ef4444"}}, # neon red
-                            totals={"marker": {"color": "#3b82f6"}}
-                        ))
-                        fig_shap.update_layout(
-                            template='plotly_dark',
-                            title="<b>Explainable AI</b>: Key Clinical Drivers",
-                            title_font=dict(size=18, color="#f8fafc"),
-                            showlegend=False,
-                            height=350,
-                            margin=dict(l=10, r=10, t=50, b=20),
-                            xaxis_title="Impact on Risk Score (Log Odds)",
-                            yaxis={'categoryorder':'total ascending'},
-                            paper_bgcolor='rgba(0,0,0,0)',
-                            plot_bgcolor='rgba(0,0,0,0)',
-                            font=dict(color="#cbd5e1")
-                        )
-
-                    # Layout the charts
-                    col_gauge, col_rec = st.columns([1, 1])
-                    with col_gauge:
-                        st.plotly_chart(fig_gauge, use_container_width=True)
-                    with col_rec:
-                        st.markdown("<br><br>", unsafe_allow_html=True)
-                        if score > 0.6: 
-                            st.error("🚨 **HIGH RISK**\n\nPatient is highly likely to return within 30 days. Recommend assigning a care coordinator and strict follow-up.")
-                        elif score > 0.3: 
-                            st.warning("⚠️ **MODERATE RISK**\n\nTargeted intervention and careful medication reconciliation recommended before discharge.")
-                        else: 
-                            st.success("✅ **LOW RISK**\n\nStandard discharge protocol is sufficient. Lower than average chance of readmission.")
-                            
-                    if fig_shap:
-                        st.plotly_chart(fig_shap, use_container_width=True)
-                        st.caption("SHAP (SHapley Additive exPlanations) values decompose the model's prediction. Red bars indicate factors increasing readmission risk; Green bars indicate protective factors.")
+                r = requests.post(f"{st.session_state.api_url}/predict", json=payload, timeout=120)
+                r.raise_for_status()
+                data = r.json()
+                st.session_state.last_score = data["risk_score"]
+                st.session_state.last_shap = data.get("shap_values")
+                st.rerun()  # Rerun to update the Risk Bar at the very top!
             except Exception as e:
-                st.error(f"Failed to connect to backend: {e}")
+                st.error(f"Failed to connect to backend API: {e}")
 
-# =====================================================================
-# TAB 2: BATCH PROCESSING
-# =====================================================================
-with tab2:
-    with st.container(border=True):
-        st.subheader("Batch Risk Scoring")
-        st.write("Upload a CSV file containing multiple patients (matching the feature schema) to score them simultaneously.")
+    # Render SHAP waterfall if we have it in session state
+    if st.session_state.last_shap:
+        st.markdown("---")
+        sorted_shap = sorted(st.session_state.last_shap.items(), key=lambda x: abs(x[1]))[-8:]
+        features = [k for k, v in sorted_shap]
+        impacts = [v for k, v in sorted_shap]
         
-        uploaded_file = st.file_uploader("Upload Patients CSV", type="csv")
-        
-        if uploaded_file is not None:
-            try:
-                df_batch = pd.read_csv(uploaded_file)
-                st.write(f"Loaded **{len(df_batch)}** records.")
-                st.dataframe(df_batch.head(5), use_container_width=True)
+        fig_shap = go.Figure(go.Waterfall(
+            x=impacts,
+            y=features,
+            orientation="h",
+            measure=["relative"] * len(features),
+            base=0,
+            decreasing={"marker": {"color": "#14b8a6"}}, # teal
+            increasing={"marker": {"color": "#ef4444"}}, # red
+            totals={"marker": {"color": "#64748b"}}
+        ))
+        fig_shap.update_layout(
+            template='plotly_dark',
+            title="<b>Explainable AI</b>: Key Clinical Drivers",
+            title_font=dict(size=14, color="#f8fafc", family="Plus Jakarta Sans"),
+            showlegend=False,
+            height=300,
+            margin=dict(l=10, r=10, t=40, b=20),
+            xaxis_title="Impact on Risk Score (Log Odds)",
+            yaxis={'categoryorder':'total ascending'},
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color="#94a3b8", family="Plus Jakarta Sans")
+        )
+        st.plotly_chart(fig_shap, use_container_width=True)
+
+
+# ─────────────────────────────────────────────
+# PAGE 2: BATCH PROCESSING
+# ─────────────────────────────────────────────
+def page_batch():
+    render_top_bar()
+    st.markdown("""
+    <div class="section-header">
+        <div class="circle-num">📁</div><p class="section-title">Batch Risk Scoring</p><p class="section-desc">Upload clinical datasets</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    uploaded_file = st.file_uploader("Upload Patients CSV", type="csv")
+    if uploaded_file is not None:
+        try:
+            df_batch = pd.read_csv(uploaded_file)
+            st.write(f"Loaded **{len(df_batch)}** records.")
+            st.dataframe(df_batch.head(5), use_container_width=True)
+            
+            if st.button("Score Entire Batch", type="primary"):
+                progress_bar = st.progress(0)
+                results = []
+                for i, row in df_batch.iterrows():
+                    payload = row.to_dict()
+                    payload["care_intensity"] = payload.get("number_emergency", 0) + payload.get("number_inpatient", 0) + payload.get("number_outpatient", 0)
+                    payload["medication_changed"] = 1 if payload.get("change") == "Ch" else 0
+                    try:
+                        resp = requests.post(f"{st.session_state.api_url}/predict", json=payload, timeout=120)
+                        results.append(resp.json().get("risk_score", None))
+                    except:
+                        results.append(None)
+                    progress_bar.progress(int((i+1)/len(df_batch)*100))
                 
-                if st.button("Score Entire Batch", type="primary"):
-                    progress_bar = st.progress(0)
-                    results = []
-                    
-                    for i, row in df_batch.iterrows():
-                        payload = row.to_dict()
-                        # Auto-compute for old APIs
-                        payload["care_intensity"] = payload.get("number_emergency", 0) + payload.get("number_inpatient", 0) + payload.get("number_outpatient", 0)
-                        payload["medication_changed"] = 1 if payload.get("change") == "Ch" else 0
-                        
-                        try:
-                            resp = requests.post(f"{api_url}/predict", json=payload, timeout=120)
-                            score = resp.json().get("risk_score", None)
-                            results.append(score)
-                        except:
-                            results.append(None)
-                        progress_bar.progress(int((i+1)/len(df_batch)*100))
-                    
-                    df_batch["predicted_risk_score"] = results
-                    st.success("Batch scoring complete! You can download the annotated dataset below.")
-                    
-                    csv = df_batch.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="Download Annotated CSV",
-                        data=csv,
-                        file_name="scored_patients.csv",
-                        mime="text/csv",
-                    )
-            except Exception as e:
-                st.error(f"Error reading CSV: {e}")
+                df_batch["predicted_risk_score"] = results
+                st.success("Batch scoring complete!")
+                st.download_button("Download Annotated CSV", data=df_batch.to_csv(index=False).encode('utf-8'), file_name="scored_patients.csv", mime="text/csv")
+        except Exception as e:
+            st.error(f"Error reading CSV: {e}")
 
-# =====================================================================
-# TAB 3: SYSTEM MONITORING
-# =====================================================================
-with tab3:
-    with st.container(border=True):
-        header_col, btn_col = st.columns([4, 1])
-        with header_col:
-            st.subheader("System Telemetry")
-            st.caption("Live monitoring of the model's data exhaust (`predictions.log`).")
-        with btn_col:
-            st.button("🔄 Refresh Data", use_container_width=True)
+# ─────────────────────────────────────────────
+# PAGE 3: SYSTEM MONITORING
+# ─────────────────────────────────────────────
+def page_monitor():
+    render_top_bar()
+    st.markdown("""
+    <div class="section-header">
+        <div class="circle-num">📈</div><p class="section-title">System Telemetry</p><p class="section-desc">Live production metrics</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("🔄 Refresh Telemetry"): pass
 
-        if PREDICTION_LOG.exists():
-            df_logs = pd.read_csv(PREDICTION_LOG)
-            if len(df_logs) > 0:
-                df_logs['ts'] = pd.to_datetime(df_logs['ts'])
-                
-                total_preds = len(df_logs)
-                avg_risk = df_logs['risk_score'].mean()
-                high_risk_pct = (df_logs['risk_score'] > 0.6).mean() * 100
-
-                st.markdown("---")
-                c1, c2, c3 = st.columns(3)
-                with c1: st.metric("Total Predictions Handled", f"{total_preds}")
-                with c2: st.metric("Overall Readmission Probability", f"{avg_risk:.1%}")
-                with c3: st.metric("High-Risk Patient Ratio", f"{high_risk_pct:.1f}%")
-                
-                st.markdown("---")
-                st.markdown("**Risk Score Distribution**")
-                st.caption("A shift in this distribution may indicate concept drift in the patient population.")
-                st.bar_chart(df_logs['risk_score'].value_counts(bins=20).sort_index())
-
-                st.markdown("**Raw Pipeline Logs**")
-                st.dataframe(df_logs.sort_values("ts", ascending=False), use_container_width=True)
-            else:
-                st.info("The telemetry log exists but has no records yet. Make a prediction in the Patient Intake tab to generate data exhaust.")
+    if PREDICTION_LOG.exists():
+        df_logs = pd.read_csv(PREDICTION_LOG)
+        if len(df_logs) > 0:
+            df_logs['ts'] = pd.to_datetime(df_logs['ts'])
+            c1, c2, c3 = st.columns(3)
+            with c1: st.metric("Total Predictions", f"{len(df_logs)}")
+            with c2: st.metric("Average Probability", f"{df_logs['risk_score'].mean():.1%}")
+            with c3: st.metric("High-Risk Ratio", f"{(df_logs['risk_score'] > 0.6).mean() * 100:.1f}%")
+            
+            st.markdown("---")
+            st.markdown("**Risk Score Distribution**")
+            st.bar_chart(df_logs['risk_score'].value_counts(bins=20).sort_index())
+            st.markdown("**Raw Pipeline Logs**")
+            st.dataframe(df_logs.sort_values("ts", ascending=False), use_container_width=True)
         else:
-            st.info("No prediction logs found yet. The `predictions.log` file is generated locally when the API serves predictions. Try scoring a patient in the Intake tab while connected to Localhost!")
+            st.info("Log is empty. Make a prediction in Patient Intake first.")
+    else:
+        st.info("No prediction logs found.")
+
+# ─────────────────────────────────────────────
+# NAVIGATION SETUP (Requires Streamlit 1.37+)
+# ─────────────────────────────────────────────
+pages = {
+    "CLINICAL": [
+        st.Page(page_intake, title="Patient Intake", icon=":material/person_add:"),
+        st.Page(page_batch, title="Batch Processing", icon=":material/folder_open:"),
+        st.Page(page_monitor, title="System Monitoring", icon=":material/monitoring:")
+    ]
+}
+pg = st.navigation(pages)
+
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("<label style='font-size:0.65rem;'>API SETTINGS</label>", unsafe_allow_html=True)
+    api_choice = st.radio("Environment", ["Local API", "Cloud API"], index=0, label_visibility="collapsed")
+    new_api = DEFAULT_API if "Local" in api_choice else CLOUD_API
+    if new_api != st.session_state.api_url:
+        st.session_state.api_url = new_api
+        st.rerun()
+
+pg.run()
