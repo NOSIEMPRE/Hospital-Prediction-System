@@ -6,9 +6,9 @@
 
 ## Overview
 
-This is the production module. Every push to `main` triggers a GitHub Actions pipeline that trains the model, lints and tests the code, builds a Docker image, and pushes it to GitHub Container Registry (GHCR). The image is deployed to Render.
+This is the production module. Every push to `main` triggers a GitHub Actions pipeline that trains the model, enforces a quality gate, lints and tests the code, builds a Docker image, and pushes it to GitHub Container Registry (GHCR). The image is deployed to Render.
 
-**Live API**: [hospital-prediction-system.onrender.com](https://hospital-prediction-system.onrender.com)
+**Live API**: [hospital-readmission-risk-predictor-pcv7.onrender.com](https://hospital-readmission-risk-predictor-pcv7.onrender.com)
 
 ---
 
@@ -16,20 +16,39 @@ This is the production module. Every push to `main` triggers a GitHub Actions pi
 
 ```text
 06-cicd/
-├── train.py           # XGBoost training, MLflow logging, writes run_id.txt + models/
-├── app.py             # FastAPI service (loads model at startup)
-├── streamlit_app.py   # Interactive test UI
-├── test_api.py        # Integration tests for /health and /predict
-├── test_train.py      # Unit tests for train.py (prepare_features, DictVectorizerWrapper, etc.)
-├── config.yaml        # Feature columns and model hyperparameters
-├── Dockerfile         # Multi-stage build for production container
+├── train.py              # XGBoost training, MLflow logging, quality gate
+├── app.py                # FastAPI service (SHAP, prediction logging, CORS)
+├── streamlit_app.py      # Clinical Streamlit dashboard (3 pages)
+├── test_api.py           # Integration tests for /health and /predict
+├── test_train.py         # Unit tests for train.py
+├── config.yaml           # Hyperparameters, features, quality gate threshold
+├── Dockerfile            # Production container
 ├── requirements.txt
-├── run_id.txt         # Written by train.py, read by app.py
-├── models/            # Saved MLflow model artifact
-├── .streamlit/
-│   └── config.toml    # Streamlit theme config
+├── data/
+│   └── predictions.log   # Append-only audit log written by app.py (CSV)
+├── models/               # Saved MLflow model artifact
+│   └── model/
+├── frontend/             # React + Node.js dashboard
+│   ├── client/           # Vite + React (Login, Intake, Batch, Dashboard, Monitoring)
+│   ├── server/           # Express proxy (Node.js, port 3001)
+│   ├── Dockerfile
+│   └── docker-compose.yml
 └── README.md
 ```
+
+---
+
+## What's New (vs Phase 04)
+
+| Feature | Detail |
+| ------- | ------ |
+| **Quality gate** | `train.py` raises `ModelQualityError` and blocks CI/CD if PR-AUC < `min_pr_auc` (default 0.15) |
+| **SHAP explainability** | `app.py` computes per-prediction SHAP values and returns them in the `/predict` response |
+| **Prediction logging** | Every `/predict` call is appended to `data/predictions.log` (CSV) for audit and monitoring |
+| **CORS middleware** | FastAPI accepts cross-origin requests from the React frontend |
+| **`care_intensity` auto-computed** | Now optional in the request; API computes it if not provided |
+| **React + Node.js frontend** | Full-stack dashboard with glassmorphism dark theme, SHAP waterfall charts, batch scoring |
+| **Streamlit redesign** | Premium clinical navy UI with Plotly gauges, batch processing, system telemetry page |
 
 ---
 
@@ -39,6 +58,7 @@ This is the production module. Every push to `main` triggers a GitHub Actions pi
 git push main
   └─ Train Model (train.yml)
        ├─ python train.py
+       ├─ Quality gate: PR-AUC ≥ min_pr_auc (blocks pipeline if fails)
        └─ Upload artifact: run_id.txt + models/
   └─ Build, Test, and Deploy (ci-cd.yml)
        ├─ Download trained-model artifact
@@ -48,8 +68,6 @@ git push main
        ├─ Integration tests: pytest test_api.py (against running container)
        └─ Push image to GHCR (ghcr.io/<owner>/<repo>:latest + :<sha>)
 ```
-
-Linting uses `.flake8` at the project root (`max-line-length = 88`).
 
 ---
 
@@ -67,7 +85,7 @@ Ensure `../data/diabetic_data.csv` exists.
 ### Train + serve
 
 ```bash
-python train.py   # trains model, writes run_id.txt and models/
+python train.py   # trains model, enforces quality gate, writes run_id.txt and models/
 python app.py     # starts API at http://localhost:9696
 ```
 
@@ -75,21 +93,36 @@ python app.py     # starts API at http://localhost:9696
 
 ```bash
 # Unit tests (no server needed)
-python -m pytest -q test_train.py
+PYTHONPATH=. python -m pytest -q test_train.py
 
 # Integration tests (app.py must be running)
-python -m pytest -q test_api.py
+PYTHONPATH=. python -m pytest -q test_api.py
 ```
 
-### Streamlit UI
+### Streamlit dashboard
 
 ```bash
 streamlit run streamlit_app.py
+# → http://localhost:8501
+# Pages: Patient Intake | Batch Processing | System Monitoring
 ```
 
-- **Quick demo**: one-click prediction with a sample patient
-- **Custom form**: enter patient data and call `/predict`
-- **Sidebar**: configure API URL (localhost or Render) and check health status
+### React + Node.js frontend
+
+```bash
+# Terminal 1
+cd frontend/server && npm install && npm run dev   # Express proxy on :3001
+
+# Terminal 2
+cd frontend/client && npm install && npm run dev   # React on :5173
+```
+
+Or run the full stack with Docker:
+
+```bash
+cd frontend && docker-compose up --build
+# → http://localhost:3001
+```
 
 ---
 
@@ -98,25 +131,25 @@ streamlit run streamlit_app.py
 | Endpoint | Method | Description |
 | -------- | ------ | ----------- |
 | `/` | GET | Welcome message |
-| `/health` | GET | Service status, model loaded flag, run ID |
-| `/predict` | POST | Returns `risk_score` (0–1) and `model_version` |
+| `/health` | GET | Status, model loaded flag, run ID |
+| `/predict` | POST | Returns `risk_score` (0–1), `model_version`, `shap_values` |
 | `/docs` | GET | Swagger UI |
 
 ### Example
 
 ```bash
-curl https://hospital-prediction-system.onrender.com/health
+curl https://hospital-readmission-risk-predictor-pcv7.onrender.com/health
 
-curl -X POST https://hospital-prediction-system.onrender.com/predict \
+curl -X POST https://hospital-readmission-risk-predictor-pcv7.onrender.com/predict \
   -H "Content-Type: application/json" \
   -d '{
     "time_in_hospital": 3, "num_lab_procedures": 41,
     "num_procedures": 0, "num_medications": 8,
     "number_emergency": 0, "number_inpatient": 0,
     "number_outpatient": 0, "number_diagnoses": 9,
-    "care_intensity": 0, "admission_type_id": 1,
-    "discharge_disposition_id": 1, "admission_source_id": 7,
-    "age": "[50-60)", "gender": "Female", "race": "Caucasian",
+    "admission_type_id": 1, "discharge_disposition_id": 1,
+    "admission_source_id": 7, "age": "[50-60)",
+    "gender": "Female", "race": "Caucasian",
     "change": "Ch", "diabetesMed": "Yes",
     "medication_changed": 1,
     "A1Cresult": "not_tested", "max_glu_serum": "not_tested"
@@ -152,8 +185,6 @@ docker run -p 9696:9696 ghcr.io/nosiempre/hospital-prediction-system:latest
 5. Port: `9696`
 6. Verify: `curl https://<your-service>.onrender.com/health`
 
-The `render.yaml` at the project root automates this configuration.
-
 ---
 
 ## Troubleshooting
@@ -162,5 +193,7 @@ The `render.yaml` at the project root automates this configuration.
 | ----- | --- |
 | `run_id.txt not found` | Run `python train.py` first |
 | `models/` directory missing | Run `python train.py` — it creates the artifact |
-| Render cold start slow | First request may take 30–60s; subsequent requests are fast |
+| Quality gate blocks training | Model PR-AUC too low; check data or tune `min_pr_auc` in `config.yaml` |
+| `data/predictions.log` not found | Created automatically on first `/predict` call |
+| Render cold start slow | First request may take 30–60s on free tier |
 | Lint fails locally | Run `flake8 .` from `06-cicd/` to see all violations |
