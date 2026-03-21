@@ -155,7 +155,7 @@ def _make_feature_df(n: int = 6) -> pd.DataFrame:
             "medication_changed": [1] * n,
             "A1Cresult": ["not_tested"] * n,
             "max_glu_serum": ["not_tested"] * n,
-            "target": ([1] * 3 + [0] * 3),
+            "target": [1 if i < n // 2 else 0 for i in range(n)],
         }
     )
 
