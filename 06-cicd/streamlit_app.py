@@ -299,6 +299,7 @@ SAMPLE = {
     "max_glu_serum": "not_tested",
 }
 
+
 # ─────────────────────────────────────────────
 # Render risk result
 # ─────────────────────────────────────────────
@@ -525,7 +526,8 @@ else:
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;
                             padding:0.75rem 1rem; font-size:0.92rem; line-height:2; color:#475569; height:100%;">
                     <div style="font-size:0.8rem; font-weight:700; letter-spacing:0.05em;
-                                text-transform:uppercase; color:#94a3b8; margin-bottom:0.35rem;">Summary</div>
+                                text-transform:uppercase; color:#94a3b8;
+                                margin-bottom:0.35rem;">Summary</div>
                     <div>🏥 Days in hospital: <strong>{time_in_hospital}</strong></div>
                     <div>🧪 Lab procedures: <strong>{num_lab_procedures}</strong></div>
                     <div>💊 Medications: <strong>{num_medications}</strong></div>
@@ -535,7 +537,9 @@ else:
                 """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-            submitted = st.form_submit_button("🔍  Predict readmission risk", use_container_width=False)
+            submitted = st.form_submit_button(
+                "🔍  Predict readmission risk", use_container_width=False
+            )
 
         if submitted:
             payload = {

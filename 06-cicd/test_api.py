@@ -32,7 +32,9 @@ SAMPLE_PATIENT = {
 
 def test_health_endpoint():
     resp = requests.get(f"{BASE_URL}/health")
-    assert resp.status_code == 200, f"Unexpected status: {resp.status_code} body={resp.text}"
+    assert resp.status_code == 200, (
+        f"Unexpected status: {resp.status_code} body={resp.text}"
+    )
     data = resp.json()
     assert data.get("status") == "ok"
     assert data.get("model_loaded") is True, "Model must be loaded for deployment"
@@ -41,7 +43,9 @@ def test_health_endpoint():
 
 def test_predict_endpoint():
     resp = requests.post(f"{BASE_URL}/predict", json=SAMPLE_PATIENT)
-    assert resp.status_code == 200, f"Unexpected status: {resp.status_code} body={resp.text}"
+    assert resp.status_code == 200, (
+        f"Unexpected status: {resp.status_code} body={resp.text}"
+    )
     data = resp.json()
 
     assert "risk_score" in data and "model_version" in data
