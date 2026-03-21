@@ -137,6 +137,8 @@ class PatientRequest(BaseModel):
 class PredictionResponse(BaseModel):
     risk_score: float
     model_version: str
+    shap_values: Optional[dict[str, float]] = None
+    base_value: Optional[float] = None
 
 
 @asynccontextmanager
@@ -177,7 +179,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Hospital Readmission Risk Predictor",
-    description="Predict 30-day readmission risk for diabetic inpatients.",
+    description="Predict 30-day readmission risk for diabetic inpatients with Explainable AI.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -233,6 +235,33 @@ def predict(patient: PatientRequest, request: Request):
         feature_dict = patient.model_dump()
         pred_proba = model.predict_proba([feature_dict])[0, 1]
         
+        # Calculate Explainable AI (SHAP)
+        shap_output = None
+        base_value = None
+        try:
+            import shap
+            vectorizer = model.named_steps["vectorizer"]
+            classifier = model.named_steps["classifier"]
+            
+            # Extract features as dense array for SHAP
+            feature_matrix = vectorizer.transform([feature_dict]).toarray()
+            explainer = shap.TreeExplainer(classifier)
+            shap_raw = explainer.shap_values(feature_matrix)[0]
+            
+            # Extract base value appropriately
+            expected_val = explainer.expected_value
+            if isinstance(expected_val, (list, tuple, np.ndarray)):
+                expected_val = expected_val[-1]
+            base_value = float(expected_val)
+            
+            # Map back to semantic feature names
+            feature_names = vectorizer.dv.get_feature_names_out()
+            # Only return top 15 most impactful features to save JSON bloat
+            shap_dict = {str(k): float(v) for k, v in zip(feature_names, shap_raw) if abs(v) > 0.001}
+            shap_output = shap_dict
+        except Exception as e:
+            logger.warning("SHAP calculation skipped: %s", e)
+            
         # Log to data exhaust 
         request_id = request.headers.get("X-Request-ID", "unknown")
         if prediction_logger is not None:
@@ -245,6 +274,8 @@ def predict(patient: PatientRequest, request: Request):
         return PredictionResponse(
             risk_score=float(pred_proba),
             model_version=RUN_ID or "unknown",
+            shap_values=shap_output,
+            base_value=base_value
         )
     except Exception as e:
         logger.error("Prediction failed: %s", e)

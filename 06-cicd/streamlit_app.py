@@ -221,27 +221,91 @@ with tab1:
         with st.spinner("Analyzing patient data via ML API..."):
             try:
                 r = requests.post(f"{api_url}/predict", json=payload, timeout=120)
-                # If we get a 422, let's catch it nicely to explain why
                 if r.status_code == 422:
                     st.error(f"API rejected the data format. Detail: {r.text}")
                 else:
                     r.raise_for_status()
                     data = r.json()
                     score = data["risk_score"]
+                    shap_values = data.get("shap_values")
+                    base_value = data.get("base_value", 0.5)
                     
                     st.markdown("---")
                     st.subheader("Analysis Complete")
                     
-                    res_col1, res_col2 = st.columns([1, 2])
-                    with res_col1:
-                        st.metric(label="30-Day Readmission Risk", value=f"{score*100:.1f}%")
-                    with res_col2:
+                    import plotly.graph_objects as go
+                    
+                    # 1. Gauge Chart for Risk Score
+                    fig_gauge = go.Figure(go.Indicator(
+                        mode="gauge+number",
+                        value=score * 100,
+                        number={'suffix': "%", 'font': {'size': 50, 'color': '#0F172A'}},
+                        title={'text': "30-Day Readmission Risk", 'font': {'size': 20, 'color': '#64748b'}},
+                        gauge={
+                            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "darkgray"},
+                            'bar': {'color': "#0F172A"},
+                            'bgcolor': "white",
+                            'borderwidth': 2,
+                            'bordercolor': "#e2e8f0",
+                            'steps': [
+                                {'range': [0, 30], 'color': "#dcfce7"},  # green-100
+                                {'range': [30, 60], 'color': "#fef08a"},  # yellow-200
+                                {'range': [60, 100], 'color': "#fee2e2"}   # red-200
+                            ],
+                            'threshold': {
+                                'line': {'color': "red", 'width': 4},
+                                'thickness': 0.75,
+                                'value': 60
+                            }
+                        }
+                    ))
+                    fig_gauge.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
+                    
+                    # 2. SHAP Waterfall Chart
+                    fig_shap = None
+                    if shap_values:
+                        # Sort by absolute impact for the top 8 features
+                        sorted_shap = sorted(shap_values.items(), key=lambda x: abs(x[1]))[-8:]
+                        # For a waterfall, we want them in order of application
+                        features = [k for k, v in sorted_shap]
+                        impacts = [v for k, v in sorted_shap]
+                        
+                        fig_shap = go.Figure(go.Waterfall(
+                            x=impacts,
+                            y=features,
+                            orientation="h",
+                            measure=["relative"] * len(features),
+                            base=0,
+                            decreasing={"marker": {"color": "#22c55e"}}, # green means less risk
+                            increasing={"marker": {"color": "#ef4444"}}, # red means more risk
+                            totals={"marker": {"color": "#3b82f6"}}
+                        ))
+                        fig_shap.update_layout(
+                            title="<b>Explainable AI</b>: Key Clinical Drivers",
+                            title_font=dict(size=18, color="#0F172A"),
+                            showlegend=False,
+                            height=350,
+                            margin=dict(l=10, r=10, t=50, b=20),
+                            xaxis_title="Impact on Risk Score (Log Odds)",
+                            yaxis={'categoryorder':'total ascending'}
+                        )
+
+                    # Layout the charts
+                    col_gauge, col_rec = st.columns([1, 1])
+                    with col_gauge:
+                        st.plotly_chart(fig_gauge, use_container_width=True)
+                    with col_rec:
+                        st.markdown("<br><br>", unsafe_allow_html=True)
                         if score > 0.6: 
-                            st.error("🚨 **HIGH RISK**\n\nThe model flag this patient as highly likely to return within 30 days. Recommend assigning a care coordinator and strict follow-up.")
+                            st.error("🚨 **HIGH RISK**\n\nPatient is highly likely to return within 30 days. Recommend assigning a care coordinator and strict follow-up.")
                         elif score > 0.3: 
                             st.warning("⚠️ **MODERATE RISK**\n\nTargeted intervention and careful medication reconciliation recommended before discharge.")
                         else: 
                             st.success("✅ **LOW RISK**\n\nStandard discharge protocol is sufficient. Lower than average chance of readmission.")
+                            
+                    if fig_shap:
+                        st.plotly_chart(fig_shap, use_container_width=True)
+                        st.caption("SHAP (SHapley Additive exPlanations) values decompose the model's prediction. Red bars indicate factors increasing readmission risk; Green bars indicate protective factors.")
             except Exception as e:
                 st.error(f"Failed to connect to backend: {e}")
 
