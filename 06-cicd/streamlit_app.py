@@ -91,7 +91,7 @@ div[data-testid="stMetricLabel"] {
 """, unsafe_allow_html=True)
 
 DEFAULT_API = "http://localhost:9696" # Defaulting to local so we hit the NEW code
-CLOUD_API = "https://hospital-prediction-system.onrender.com"
+CLOUD_API = "https://hospital-readmission-risk-predictor-pcv7.onrender.com"
 PREDICTION_LOG = Path(__file__).resolve().parent / "data" / "predictions.log"
 
 # ─────────────────────────────────────────────
