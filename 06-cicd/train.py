@@ -97,7 +97,7 @@ def read_data(
             f"Data not found at {path}. "
             "In a production system, data should be staged before training starts."
         )
-        
+
     logger.info("Loading raw data from %s ...", path)
     df = pd.read_csv(path)
     df["target"] = df["readmitted"].isin(["30", "<30"]).astype(int)

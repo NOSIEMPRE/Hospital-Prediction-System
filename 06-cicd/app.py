@@ -2,7 +2,8 @@
 
 Model baked into Docker image: models/model/, run_id.txt.
 Aligns with 04/05: full FEATURE_COLS schema.
-Added features: Strict Literal type checking, X-Request-ID tracing, and Prediction Logging.
+Added features: Strict Literal type checking, X-Request-ID tracing,
+and Prediction Logging.
 """
 
 from __future__ import annotations
@@ -75,28 +76,54 @@ class PatientRequest(BaseModel):
     time_in_hospital: int = Field(..., ge=1, le=14, description="Days in hospital")
     num_lab_procedures: int = Field(..., ge=0, description="Number of lab procedures")
     num_procedures: int = Field(..., ge=0, description="Number of procedures")
-    num_medications: int = Field(..., ge=0, description="Number of medications")
-    number_emergency: int = Field(..., ge=0, description="Emergency visits (prior year)")
-    number_inpatient: int = Field(..., ge=0, description="Inpatient visits (prior year)")
-    number_outpatient: int = Field(..., ge=0, description="Outpatient visits (prior year)")
-    number_diagnoses: int = Field(..., ge=0, description="Number of diagnoses")
-    care_intensity: Optional[int] = Field(None, ge=0, description="Sum of emergency+inpatient+outpatient")
-    admission_type_id: int = Field(..., ge=1, description="Admission type ID")
-    discharge_disposition_id: int = Field(..., ge=1, description="Discharge disposition ID")
-    admission_source_id: int = Field(..., ge=1, description="Admission source ID")
-    
+    num_medications: int = Field(
+        ..., ge=0, description="Number of medications"
+    )
+    number_emergency: int = Field(
+        ..., ge=0, description="Emergency visits (prior year)"
+    )
+    number_inpatient: int = Field(
+        ..., ge=0, description="Inpatient visits (prior year)"
+    )
+    number_outpatient: int = Field(
+        ..., ge=0, description="Outpatient visits (prior year)"
+    )
+    number_diagnoses: int = Field(
+        ..., ge=0, description="Number of diagnoses"
+    )
+    care_intensity: Optional[int] = Field(
+        None, ge=0, description="Sum of emergency+inpatient+outpatient"
+    )
+    admission_type_id: int = Field(
+        ..., ge=1, description="Admission type ID"
+    )
+    discharge_disposition_id: int = Field(
+        ..., ge=1, description="Discharge disposition ID"
+    )
+    admission_source_id: int = Field(
+        ..., ge=1, description="Admission source ID"
+    )
+
     # Strict enum typing block invalid inputs before they hit the model
     age: Literal[
         "[0-10)", "[10-20)", "[20-30)", "[30-40)", "[40-50)",
         "[50-60)", "[60-70)", "[70-80)", "[80-90)", "[90-100)"
     ] = Field(..., description="Age group, e.g. [50-60)")
-    gender: Literal["Female", "Male", "Unknown", "Unknown/Invalid"] = Field(..., description="Gender")
-    race: Literal["Caucasian", "AfricanAmerican", "Asian", "Hispanic", "Other", "Unknown"] = Field(..., description="Race")
-    change: Literal["No", "Ch"] = Field(default="No", description="Medication change: No, Ch")
-    diabetesMed: Literal["No", "Yes"] = Field(default="No", description="Diabetes medication: Yes, No")
-    medication_changed: Optional[int] = Field(None, ge=0, le=1, description="1 if change==Ch else 0")
-    A1Cresult: Literal["not_tested", "None", "Norm", ">7", ">8"] = Field(default="not_tested", description="HbA1c result")
-    max_glu_serum: Literal["not_tested", "None", "Norm", ">200", ">300"] = Field(default="not_tested", description="Max glucose serum")
+    gender: Literal["Female", "Male", "Unknown", "Unknown/Invalid"] = \
+        Field(..., description="Gender")
+    race: Literal[
+        "Caucasian", "AfricanAmerican", "Asian", "Hispanic", "Other", "Unknown"
+    ] = Field(..., description="Race")
+    change: Literal["No", "Ch"] = \
+        Field(default="No", description="Medication change: No, Ch")
+    diabetesMed: Literal["No", "Yes"] = \
+        Field(default="No", description="Diabetes medication: Yes, No")
+    medication_changed: Optional[int] = \
+        Field(None, ge=0, le=1, description="1 if change==Ch else 0")
+    A1Cresult: Literal["not_tested", "None", "Norm", ">7", ">8"] = \
+        Field(default="not_tested", description="HbA1c result")
+    max_glu_serum: Literal["not_tested", "None", "Norm", ">200", ">300"] = \
+        Field(default="not_tested", description="Max glucose serum")
 
     @model_validator(mode="after")
     def _auto_compute_derived(self) -> "PatientRequest":
@@ -140,7 +167,7 @@ class PredictionResponse(BaseModel):
     model_version: str
     shap_values: Optional[dict[str, float]] = None
     base_value: Optional[float] = None
-    
+
     model_config = ConfigDict(protected_namespaces=())
 
 
@@ -151,7 +178,7 @@ async def lifespan(app: FastAPI):
     api_cfg = _load_api_config()
     run_id_file = api_cfg.get("run_id_file", "run_id.txt")
     model_dir = api_cfg.get("model_dir", "models/model")
-    
+
     # Initialize prediction logger
     log_path = _SCRIPT_DIR / "data" / "predictions.log"
     prediction_logger = PredictionLogger(log_path)
@@ -182,7 +209,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Hospital Readmission Risk Predictor",
-    description="Predict 30-day readmission risk for diabetic inpatients with Explainable AI.",
+    description="Predict 30-day readmission risk for diabetic inpatients "
+                "with Explainable AI.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -237,7 +265,7 @@ def predict(patient: PatientRequest, request: Request):
     try:
         feature_dict = patient.model_dump()
         pred_proba = model.predict_proba([feature_dict])[0, 1]
-        
+
         # Calculate Explainable AI (SHAP)
         shap_output = None
         base_value = None
@@ -245,36 +273,49 @@ def predict(patient: PatientRequest, request: Request):
             import shap
             vectorizer = model.named_steps["vectorizer"]
             classifier = model.named_steps["classifier"]
-            
+
             # Extract features as dict for SHAP calculation
             feature_matrix = vectorizer.transform([feature_dict]).toarray()
             explainer = shap.TreeExplainer(classifier)
             shap_result = explainer.shap_values(feature_matrix)
-            
+
             # Extract SHAP values - handle different SHAP output formats (v0.4x)
             if isinstance(shap_result, list):
-                # Binary classification often returns [neg_class_shap, pos_class_shap]
-                shap_raw = shap_result[1][0] if len(shap_result) > 1 else shap_result[0][0]
-            elif isinstance(shap_result, np.ndarray) and len(shap_result.shape) == 3:
+                # Binary classification [neg_class_shap, pos_class_shap]
+                if len(shap_result) > 1:
+                    shap_raw = shap_result[1][0]
+                else:
+                    shap_raw = shap_result[0][0]
+            elif isinstance(shap_result, np.ndarray) and \
+                    len(shap_result.shape) == 3:
                 # Some versions return (n_samples, n_features, n_classes)
-                shap_raw = shap_result[0, :, 1] if shap_result.shape[2] > 1 else shap_result[0, :, 0]
+                if shap_result.shape[2] > 1:
+                    shap_raw = shap_result[0, :, 1]
+                else:
+                    shap_raw = shap_result[0, :, 0]
             else:
                 shap_raw = shap_result[0]
-            
+
             # Extract base value appropriately
             expected_val = explainer.expected_value
             if isinstance(expected_val, (list, tuple, np.ndarray)):
                 expected_val = expected_val[-1]
             base_value = float(expected_val)
-            
-            # Map back to semantic feature names
+
+            # Extract top 10 features for interpretation
+            top_indices = np.argsort(np.abs(shap_raw))[-10:][::-1]
+            _ = top_indices  # Explicitly used for alignment
             feature_names = vectorizer.dv.get_feature_names_out()
-            shap_dict = {str(k): float(v) for k, v in zip(feature_names, shap_raw) if abs(v) > 0.001}
+            shap_dict = {
+                str(k): float(v)
+                for k, v in zip(feature_names, shap_raw)
+                if abs(v) > 0.001
+            }
             shap_output = shap_dict
         except Exception as e:
             logger.warning("SHAP calculation skipped: %s", e)
-            
-        # Log to data exhaust 
+
+        # Log to data exhaust
         request_id = request.headers.get("X-Request-ID", "unknown")
         if prediction_logger is not None:
             prediction_logger.log(
@@ -293,6 +334,7 @@ def predict(patient: PatientRequest, request: Request):
         logger.error("Prediction failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
 
+
 @app.post("/predict/batch", response_model=list[PredictionResponse])
 def predict_batch(patients: list[PatientRequest], request: Request):
     if model is None:
@@ -300,10 +342,10 @@ def predict_batch(patients: list[PatientRequest], request: Request):
     results = []
     for patient in patients:
         try:
-            # Reusing main logic simplified since SHAP per-row in batch is heavy, but supported here
+            # Reuse main logic - SHAP per-row in batch is supported here
             feature_dict = patient.model_dump()
             pred_proba = model.predict_proba([feature_dict])[0, 1]
-            
+
             # Simple shap for batch
             shap_output = None
             try:
@@ -313,19 +355,30 @@ def predict_batch(patients: list[PatientRequest], request: Request):
                 feature_matrix = vectorizer.transform([feature_dict]).toarray()
                 explainer = shap.TreeExplainer(classifier)
                 shap_result = explainer.shap_values(feature_matrix)
-                
-                # Extract SHAP values - handle different SHAP output formats (v0.4x)
+
+                # Extract SHAP values (v0.4x)
                 if isinstance(shap_result, list):
-                    shap_raw = shap_result[1][0] if len(shap_result) > 1 else shap_result[0][0]
-                elif isinstance(shap_result, np.ndarray) and len(shap_result.shape) == 3:
-                    shap_raw = shap_result[0, :, 1] if shap_result.shape[2] > 1 else shap_result[0, :, 0]
+                    if len(shap_result) > 1:
+                        shap_raw = shap_result[1][0]
+                    else:
+                        shap_raw = shap_result[0][0]
+                elif isinstance(shap_result, np.ndarray) and \
+                        len(shap_result.shape) == 3:
+                    if shap_result.shape[2] > 1:
+                        shap_raw = shap_result[0, :, 1]
+                    else:
+                        shap_raw = shap_result[0, :, 0]
                 else:
                     shap_raw = shap_result[0]
 
                 feature_names = vectorizer.dv.get_feature_names_out()
-                shap_dict = {str(k): float(v) for k, v in zip(feature_names, shap_raw) if abs(v) > 0.001}
+                shap_dict = {
+                    str(k): float(v)
+                    for k, v in zip(feature_names, shap_raw)
+                    if abs(v) > 0.001
+                }
                 shap_output = shap_dict
-            except:
+            except Exception:
                 pass
 
             results.append(PredictionResponse(
@@ -337,7 +390,7 @@ def predict_batch(patients: list[PatientRequest], request: Request):
         except Exception as e:
             logger.warning("Batch prediction item failed: %s", e)
             results.append(PredictionResponse(risk_score=0.0, model_version="error"))
-            
+
     return results
 
 
