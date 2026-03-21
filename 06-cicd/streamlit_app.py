@@ -20,72 +20,117 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# MINIMAL MODERN CSS (Wix-inspired clean look)
+# PREMIUM DARK GLASSMORPHISM CSS
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
-/* Make the overall background a soft gray-white */
+/* Deep dynamic dark background */
 .stApp {
-    background-color: #FAFAFA;
+    background: radial-gradient(circle at 15% 50%, #1e1b4b, #0f172a 40%, #020617 100%);
+    background-attachment: fixed;
+    color: #e2e8f0;
 }
 
-/* Style the top header title nicely */
+/* Headers */
 .main-header {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #111827;
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: -webkit-linear-gradient(45deg, #38bdf8, #818cf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     margin-bottom: 0.2rem;
+    letter-spacing: -0.02em;
 }
 .sub-header {
-    font-size: 1rem;
-    color: #6B7280;
+    font-size: 1.1rem;
+    color: #94a3b8;
     margin-bottom: 2rem;
+    font-weight: 400;
 }
 
-/* Beautiful form submit button */
+/* Glassmorphism containers replacing native borders */
+div[data-testid="stVerticalBlock"] > div[style*="border"] {
+    background: rgba(30, 41, 59, 0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+    padding: 1.5rem !important;
+}
+
+/* Neon primary buttons */
 .stFormSubmitButton button, button[kind="primary"] {
-    background-color: #0F172A !important;
+    background: linear-gradient(90deg, #0ea5e9 0%, #6366f1 100%) !important;
     color: white !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
     padding: 0.6rem 2rem !important;
     border: none !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
 }
 .stFormSubmitButton button:hover, button[kind="primary"]:hover {
-    background-color: #334155 !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6) !important;
 }
 
-/* Custom metric styling for Dashboard */
+/* Inputs styling for dark mode */
+.stSelectbox > div > div, .stNumberInput > div > div, .stTextInput > div > div {
+    background-color: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #f8fafc !important;
+    border-radius: 8px !important;
+}
+label {
+    color: #cbd5e1 !important;
+    font-weight: 500 !important;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background: rgba(15, 23, 42, 0.7) !important;
+    backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Gorgeous neon metrics */
 div[data-testid="stMetricValue"] {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #0F172A;
+    font-size: 3rem;
+    font-weight: 800;
+    color: #f8fafc !important;
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
 }
 div[data-testid="stMetricLabel"] {
     font-size: 0.95rem;
-    color: #64748b;
+    color: #94a3b8 !important;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
 }
 
-/* Clean up tabs */
+/* Tab styling overrides */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 2rem;
-    border-bottom: 2px solid #E2E8F0;
+    background: transparent;
+    border-bottom: 2px solid rgba(255,255,255,0.05) !important;
 }
 .stTabs [data-baseweb="tab"] {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+    color: #64748b !important;
+    font-weight: 600 !important;
+}
+.stTabs [aria-selected="true"] {
+    color: #38bdf8 !important;
+    border-bottom: 3px solid #38bdf8 !important;
+}
+hr {
+    border-color: rgba(255,255,255,0.1) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -239,34 +284,37 @@ with tab1:
                     fig_gauge = go.Figure(go.Indicator(
                         mode="gauge+number",
                         value=score * 100,
-                        number={'suffix': "%", 'font': {'size': 50, 'color': '#0F172A'}},
-                        title={'text': "30-Day Readmission Risk", 'font': {'size': 20, 'color': '#64748b'}},
+                        number={'suffix': "%", 'font': {'size': 50, 'color': '#f8fafc'}},
+                        title={'text': "30-Day Readmission Risk", 'font': {'size': 20, 'color': '#94a3b8'}},
                         gauge={
-                            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "darkgray"},
-                            'bar': {'color': "#0F172A"},
-                            'bgcolor': "white",
+                            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "rgba(255,255,255,0.2)"},
+                            'bar': {'color': "#38bdf8"}, # Neon blue fill
+                            'bgcolor': "rgba(0,0,0,0.3)",
                             'borderwidth': 2,
-                            'bordercolor': "#e2e8f0",
+                            'bordercolor': "rgba(255,255,255,0.1)",
                             'steps': [
-                                {'range': [0, 30], 'color': "#dcfce7"},  # green-100
-                                {'range': [30, 60], 'color': "#fef08a"},  # yellow-200
-                                {'range': [60, 100], 'color': "#fee2e2"}   # red-200
+                                {'range': [0, 30], 'color': "rgba(34, 197, 94, 0.2)"},   # faint green
+                                {'range': [30, 60], 'color': "rgba(234, 179, 8, 0.2)"},  # faint yellow
+                                {'range': [60, 100], 'color': "rgba(239, 68, 68, 0.2)"}   # faint red
                             ],
                             'threshold': {
-                                'line': {'color': "red", 'width': 4},
+                                'line': {'color': "#ef4444", 'width': 4},
                                 'thickness': 0.75,
                                 'value': 60
                             }
                         }
                     ))
-                    fig_gauge.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
+                    fig_gauge.update_layout(
+                        height=350, 
+                        margin=dict(l=20, r=20, t=50, b=20),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)'
+                    )
                     
                     # 2. SHAP Waterfall Chart
                     fig_shap = None
                     if shap_values:
-                        # Sort by absolute impact for the top 8 features
                         sorted_shap = sorted(shap_values.items(), key=lambda x: abs(x[1]))[-8:]
-                        # For a waterfall, we want them in order of application
                         features = [k for k, v in sorted_shap]
                         impacts = [v for k, v in sorted_shap]
                         
@@ -276,18 +324,22 @@ with tab1:
                             orientation="h",
                             measure=["relative"] * len(features),
                             base=0,
-                            decreasing={"marker": {"color": "#22c55e"}}, # green means less risk
-                            increasing={"marker": {"color": "#ef4444"}}, # red means more risk
+                            decreasing={"marker": {"color": "#22c55e"}}, # vibrant green
+                            increasing={"marker": {"color": "#ef4444"}}, # neon red
                             totals={"marker": {"color": "#3b82f6"}}
                         ))
                         fig_shap.update_layout(
+                            template='plotly_dark',
                             title="<b>Explainable AI</b>: Key Clinical Drivers",
-                            title_font=dict(size=18, color="#0F172A"),
+                            title_font=dict(size=18, color="#f8fafc"),
                             showlegend=False,
                             height=350,
                             margin=dict(l=10, r=10, t=50, b=20),
                             xaxis_title="Impact on Risk Score (Log Odds)",
-                            yaxis={'categoryorder':'total ascending'}
+                            yaxis={'categoryorder':'total ascending'},
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            font=dict(color="#cbd5e1")
                         )
 
                     # Layout the charts
