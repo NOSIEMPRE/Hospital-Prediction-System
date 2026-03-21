@@ -37,7 +37,7 @@ model: Optional[Any] = None
 def _load_api_config() -> dict:
     """Load API section from config.yaml, with safe defaults."""
     if _CONFIG_PATH.exists():
-        with open(_CONFIG_PATH) as f:
+        with open(_CONFIG_PATH, encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
         return cfg.get("api", {})
     return {}
@@ -139,6 +139,8 @@ class PredictionResponse(BaseModel):
     model_version: str
     shap_values: Optional[dict[str, float]] = None
     base_value: Optional[float] = None
+    
+    model_config = ConfigDict(protected_namespaces=())
 
 
 @asynccontextmanager
