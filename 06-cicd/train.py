@@ -2,12 +2,14 @@
 
 CI/CD version: saves model to models/model/ for Docker build.
 Aligns with 04/05: full FEATURE_COLS, patient-level split, scale_pos_weight.
+Added features: automated quality gate. Missing data strictly halts the pipeline.
 """
 
 from __future__ import annotations
 
 import logging
 import shutil
+import sys
 from pathlib import Path
 
 import mlflow
@@ -54,6 +56,11 @@ FEATURE_COLS = [
 ]
 
 
+class ModelQualityError(Exception):
+    """Raised when the trained model fails the quality gate."""
+    pass
+
+
 def load_config() -> dict:
     """Load configuration from config.yaml."""
     if not _CONFIG_PATH.exists():
@@ -88,9 +95,9 @@ def read_data(
     if not path.exists():
         raise FileNotFoundError(
             f"Data not found at {path}. "
-            "Download from UCI (https://archive.ics.uci.edu/dataset/296) "
-            "and place diabetic_data.csv in data/"
+            "In a production system, data should be staged before training starts."
         )
+        
     logger.info("Loading raw data from %s ...", path)
     df = pd.read_csv(path)
     df["target"] = df["readmitted"].isin(["30", "<30"]).astype(int)
@@ -161,11 +168,12 @@ def train_and_log(
     y_val,
     cfg: dict,
 ) -> str:
-    """Train model, log to MLflow, save to models/model/."""
+    """Train model, log to MLflow, enforce quality gate, save to models/model/."""
     logger.info("Training model ...")
     mlflow_cfg = cfg["mlflow"]
     model_cfg = cfg["model"]
     seed = cfg.get("seed", 42)
+    min_pr_auc = model_cfg.get("min_pr_auc", 0.10)
 
     tracking_uri = f"sqlite:///{_SCRIPT_DIR / mlflow_cfg['db']}"
     mlflow.set_tracking_uri(tracking_uri)
@@ -204,6 +212,14 @@ def train_and_log(
         logger.info("PR-AUC: %.3f  ROC-AUC: %.3f", pr_auc, roc_auc)
         logger.info("MLflow Run ID: %s", run_id)
 
+    # ── Quality gate ──────────────────────────────────────────────────────
+    if pr_auc < min_pr_auc:
+        raise ModelQualityError(
+            f"Model PR-AUC ({pr_auc:.4f}) is below the minimum threshold "
+            f"({min_pr_auc:.4f}). CI/CD Pipeline blocked."
+        )
+    logger.info("✓ Quality gate passed (PR-AUC %.4f >= %.4f)", pr_auc, min_pr_auc)
+
     deployment_path = _SCRIPT_DIR / "models" / "model"
     logger.info("Saving deployment-ready model to %s ...", deployment_path)
     if deployment_path.exists():
@@ -223,22 +239,26 @@ def main() -> None:
     data_path = _SCRIPT_DIR.parent / cfg["data"]["path"]
     limit = cfg["data"].get("limit", 50_000)
 
-    df = read_data(data_path, seed=seed, limit=limit)
+    try:
+        df = read_data(data_path, seed=seed, limit=limit)
 
-    patient_target = df.groupby("patient_nbr")["target"].max()
-    train_patients, val_patients = train_test_split(
-        patient_target.index.tolist(),
-        test_size=0.2,
-        random_state=seed,
-        stratify=patient_target.values,
-    )
-    df_train = df[df["patient_nbr"].isin(train_patients)]
-    df_val = df[df["patient_nbr"].isin(val_patients)]
-    X_train, y_train = prepare_features(df_train)
-    X_val, y_val = prepare_features(df_val)
+        patient_target = df.groupby("patient_nbr")["target"].max()
+        train_patients, val_patients = train_test_split(
+            patient_target.index.tolist(),
+            test_size=0.2,
+            random_state=seed,
+            stratify=patient_target.values,
+        )
+        df_train = df[df["patient_nbr"].isin(train_patients)]
+        df_val = df[df["patient_nbr"].isin(val_patients)]
+        X_train, y_train = prepare_features(df_train)
+        X_val, y_val = prepare_features(df_val)
 
-    train_and_log(X_train, y_train, X_val, y_val, cfg)
-    logger.info("Training complete.")
+        train_and_log(X_train, y_train, X_val, y_val, cfg)
+        logger.info("Training complete.")
+    except ModelQualityError as e:
+        logger.error("❌ %s", e)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

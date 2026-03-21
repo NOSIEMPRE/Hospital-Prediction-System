@@ -23,6 +23,7 @@ model:
   subsample: 0.8
   colsample_bytree: 0.8
   eval_metric: "aucpr"
+  min_pr_auc: 0.15
 
 # ── API server ────────────────────────────────────────────────────────────────
 api:

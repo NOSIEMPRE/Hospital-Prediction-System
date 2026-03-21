@@ -2,19 +2,24 @@
 
 Model baked into Docker image: models/model/, run_id.txt.
 Aligns with 04/05: full FEATURE_COLS schema.
+Added features: Strict Literal type checking, X-Request-ID tracing, and Prediction Logging.
 """
 
 from __future__ import annotations
 
+import datetime
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import mlflow.sklearn
 import yaml
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +43,31 @@ def _load_api_config() -> dict:
     return {}
 
 
+class PredictionLogger:
+    """Appends predictions to a CSV for downstream monitoring."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        if not self.path.exists():
+            self.path.write_text(
+                "ts,request_id,risk_score,model_version\n"
+            )
+
+    def log(
+        self,
+        request_id: str,
+        risk_score: float,
+        model_version: str,
+    ) -> None:
+        ts = datetime.datetime.utcnow().isoformat()
+        with open(self.path, "a") as f:
+            f.write(f"{ts},{request_id},{risk_score},{model_version}\n")
+
+
+prediction_logger: Optional[PredictionLogger] = None
+
+
 class PatientRequest(BaseModel):
     """Request body for /predict. Must match train.py FEATURE_COLS."""
 
@@ -45,34 +75,38 @@ class PatientRequest(BaseModel):
     num_lab_procedures: int = Field(..., ge=0, description="Number of lab procedures")
     num_procedures: int = Field(..., ge=0, description="Number of procedures")
     num_medications: int = Field(..., ge=0, description="Number of medications")
-    number_emergency: int = Field(
-        ..., ge=0, description="Emergency visits (prior year)"
-    )
-    number_inpatient: int = Field(
-        ..., ge=0, description="Inpatient visits (prior year)"
-    )
-    number_outpatient: int = Field(
-        ..., ge=0, description="Outpatient visits (prior year)"
-    )
+    number_emergency: int = Field(..., ge=0, description="Emergency visits (prior year)")
+    number_inpatient: int = Field(..., ge=0, description="Inpatient visits (prior year)")
+    number_outpatient: int = Field(..., ge=0, description="Outpatient visits (prior year)")
     number_diagnoses: int = Field(..., ge=0, description="Number of diagnoses")
-    care_intensity: int = Field(
-        ..., ge=0, description="Sum of emergency+inpatient+outpatient"
-    )
+    care_intensity: Optional[int] = Field(None, ge=0, description="Sum of emergency+inpatient+outpatient")
     admission_type_id: int = Field(..., ge=1, description="Admission type ID")
-    discharge_disposition_id: int = Field(
-        ..., ge=1, description="Discharge disposition ID"
-    )
+    discharge_disposition_id: int = Field(..., ge=1, description="Discharge disposition ID")
     admission_source_id: int = Field(..., ge=1, description="Admission source ID")
-    age: str = Field(..., description="Age group, e.g. [50-60)")
-    gender: str = Field(..., description="Gender")
-    race: str = Field(..., description="Race")
-    change: str = Field(default="No", description="Medication change: No, Ch, etc.")
-    diabetesMed: str = Field(default="No", description="Diabetes medication: Yes, No")
-    medication_changed: int = Field(
-        ..., ge=0, le=1, description="1 if change==Ch else 0"
-    )
-    A1Cresult: str = Field(default="not_tested", description="HbA1c result")
-    max_glu_serum: str = Field(default="not_tested", description="Max glucose serum")
+    
+    # Strict enum typing block invalid inputs before they hit the model
+    age: Literal[
+        "[0-10)", "[10-20)", "[20-30)", "[30-40)", "[40-50)",
+        "[50-60)", "[60-70)", "[70-80)", "[80-90)", "[90-100)"
+    ] = Field(..., description="Age group, e.g. [50-60)")
+    gender: Literal["Female", "Male", "Unknown", "Unknown/Invalid"] = Field(..., description="Gender")
+    race: Literal["Caucasian", "AfricanAmerican", "Asian", "Hispanic", "Other", "Unknown"] = Field(..., description="Race")
+    change: Literal["No", "Ch"] = Field(default="No", description="Medication change: No, Ch")
+    diabetesMed: Literal["No", "Yes"] = Field(default="No", description="Diabetes medication: Yes, No")
+    medication_changed: Optional[int] = Field(None, ge=0, le=1, description="1 if change==Ch else 0")
+    A1Cresult: Literal["not_tested", "None", "Norm", ">7", ">8"] = Field(default="not_tested", description="HbA1c result")
+    max_glu_serum: Literal["not_tested", "None", "Norm", ">200", ">300"] = Field(default="not_tested", description="Max glucose serum")
+
+    @model_validator(mode="after")
+    def _auto_compute_derived(self) -> "PatientRequest":
+        """Auto-compute derived fields if the caller didn't provide them."""
+        if self.care_intensity is None:
+            self.care_intensity = (
+                self.number_emergency + self.number_inpatient + self.number_outpatient
+            )
+        if self.medication_changed is None:
+            self.medication_changed = 1 if self.change == "Ch" else 0
+        return self
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -85,7 +119,6 @@ class PatientRequest(BaseModel):
                 "number_inpatient": 0,
                 "number_outpatient": 0,
                 "number_diagnoses": 9,
-                "care_intensity": 0,
                 "admission_type_id": 1,
                 "discharge_disposition_id": 1,
                 "admission_source_id": 7,
@@ -94,7 +127,6 @@ class PatientRequest(BaseModel):
                 "race": "Caucasian",
                 "change": "Ch",
                 "diabetesMed": "Yes",
-                "medication_changed": 1,
                 "A1Cresult": "not_tested",
                 "max_glu_serum": "not_tested",
             }
@@ -109,11 +141,16 @@ class PredictionResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global RUN_ID, model
+    global RUN_ID, model, prediction_logger
 
     api_cfg = _load_api_config()
     run_id_file = api_cfg.get("run_id_file", "run_id.txt")
     model_dir = api_cfg.get("model_dir", "models/model")
+    
+    # Initialize prediction logger
+    log_path = _SCRIPT_DIR / "data" / "predictions.log"
+    prediction_logger = PredictionLogger(log_path)
+    logger.info("Prediction logging initialized at %s", log_path)
 
     run_id_path = Path(run_id_file)
     if run_id_path.exists():
@@ -145,6 +182,34 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    """Tracing middleware: adds X-Request-ID and execution time logs."""
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Response-Time-Ms"] = f"{elapsed_ms:.1f}"
+    logger.info(
+        "%s %s -> %d (%.1fms) [%s]",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+        request_id,
+    )
+    return response
+
 
 @app.get("/")
 def root():
@@ -161,12 +226,22 @@ def health():
 
 
 @app.post("/predict", response_model=PredictionResponse)
-def predict(patient: PatientRequest):
+def predict(patient: PatientRequest, request: Request):
     if model is None:
-        raise HTTPException(status_code=500, detail="Model not loaded. Check /health.")
+        raise HTTPException(status_code=503, detail="Model not loaded. Check /health.")
     try:
         feature_dict = patient.model_dump()
         pred_proba = model.predict_proba([feature_dict])[0, 1]
+        
+        # Log to data exhaust 
+        request_id = request.headers.get("X-Request-ID", "unknown")
+        if prediction_logger is not None:
+            prediction_logger.log(
+                request_id=request_id,
+                risk_score=float(pred_proba),
+                model_version=RUN_ID or "unknown",
+            )
+
         return PredictionResponse(
             risk_score=float(pred_proba),
             model_version=RUN_ID or "unknown",
