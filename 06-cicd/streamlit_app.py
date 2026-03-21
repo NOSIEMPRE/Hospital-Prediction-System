@@ -370,24 +370,27 @@ with tab3:
 
         if PREDICTION_LOG.exists():
             df_logs = pd.read_csv(PREDICTION_LOG)
-            df_logs['ts'] = pd.to_datetime(df_logs['ts'])
-            
-            total_preds = len(df_logs)
-            avg_risk = df_logs['risk_score'].mean()
-            high_risk_pct = (df_logs['risk_score'] > 0.6).mean() * 100
+            if len(df_logs) > 0:
+                df_logs['ts'] = pd.to_datetime(df_logs['ts'])
+                
+                total_preds = len(df_logs)
+                avg_risk = df_logs['risk_score'].mean()
+                high_risk_pct = (df_logs['risk_score'] > 0.6).mean() * 100
 
-            st.markdown("---")
-            c1, c2, c3 = st.columns(3)
-            with c1: st.metric("Total Predictions Handled", f"{total_preds}")
-            with c2: st.metric("Overall Readmission Probability", f"{avg_risk:.1%}")
-            with c3: st.metric("High-Risk Patient Ratio", f"{high_risk_pct:.1f}%")
-            
-            st.markdown("---")
-            st.markdown("**Risk Score Distribution**")
-            st.caption("A shift in this distribution may indicate concept drift in the patient population.")
-            st.bar_chart(df_logs['risk_score'].value_counts(bins=20).sort_index())
+                st.markdown("---")
+                c1, c2, c3 = st.columns(3)
+                with c1: st.metric("Total Predictions Handled", f"{total_preds}")
+                with c2: st.metric("Overall Readmission Probability", f"{avg_risk:.1%}")
+                with c3: st.metric("High-Risk Patient Ratio", f"{high_risk_pct:.1f}%")
+                
+                st.markdown("---")
+                st.markdown("**Risk Score Distribution**")
+                st.caption("A shift in this distribution may indicate concept drift in the patient population.")
+                st.bar_chart(df_logs['risk_score'].value_counts(bins=20).sort_index())
 
-            st.markdown("**Raw Pipeline Logs**")
-            st.dataframe(df_logs.sort_values("ts", ascending=False), use_container_width=True)
+                st.markdown("**Raw Pipeline Logs**")
+                st.dataframe(df_logs.sort_values("ts", ascending=False), use_container_width=True)
+            else:
+                st.info("The telemetry log exists but has no records yet. Make a prediction in the Patient Intake tab to generate data exhaust.")
         else:
             st.info("No prediction logs found yet. The `predictions.log` file is generated locally when the API serves predictions. Try scoring a patient in the Intake tab while connected to Localhost!")
