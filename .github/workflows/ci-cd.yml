@@ -54,7 +54,11 @@ jobs:
         run: |
           docker build -t hospital-readmission-app .
           docker run -d -p 9696:9696 --name hospital-app hospital-readmission-app
-          sleep 40
+          for i in $(seq 1 24); do
+            curl -sf http://localhost:9696/health && break
+            echo "Waiting for app... attempt $i/24"
+            sleep 5
+          done
           curl -f http://localhost:9696/health || (docker logs hospital-app && exit 1)
           python -m pytest -q test_api.py || (docker logs hospital-app && exit 1)
           docker stop hospital-app && docker rm hospital-app
