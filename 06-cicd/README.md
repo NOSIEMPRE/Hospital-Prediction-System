@@ -8,7 +8,7 @@
 
 This is the production module. Every push to `main` triggers a GitHub Actions pipeline that trains the model, lints and tests the code, builds a Docker image, and pushes it to GitHub Container Registry (GHCR). The image is deployed to Render.
 
-**Live API**: [hospital-readmission-risk-predictor-pcv7.onrender.com](https://hospital-readmission-risk-predictor-pcv7.onrender.com)
+**Live API**: [hospital-prediction-system.onrender.com](https://hospital-prediction-system.onrender.com)
 
 ---
 
@@ -105,9 +105,9 @@ streamlit run streamlit_app.py
 ### Example
 
 ```bash
-curl https://hospital-readmission-risk-predictor-pcv7.onrender.com/health
+curl https://hospital-prediction-system.onrender.com/health
 
-curl -X POST https://hospital-readmission-risk-predictor-pcv7.onrender.com/predict \
+curl -X POST https://hospital-prediction-system.onrender.com/predict \
   -H "Content-Type: application/json" \
   -d '{
     "time_in_hospital": 3, "num_lab_procedures": 41,

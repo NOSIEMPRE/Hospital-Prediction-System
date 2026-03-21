@@ -13,7 +13,7 @@ This project builds a machine learning system to predict 30-day readmission risk
 - **Dataset**: Diabetes 130-US Hospitals (UCI ML Repository, id 296) — Strack et al., 2014
 - **Target**: Binary classification — readmitted within 30 days (yes/no)
 - **Model**: XGBoost pipeline tracked with MLflow
-- **Live API**: [hospital-readmission-risk-predictor-pcv7.onrender.com](https://hospital-readmission-risk-predictor-pcv7.onrender.com)
+- **Live API**: [hospital-prediction-system.onrender.com](https://hospital-prediction-system.onrender.com)
 
 ---
 
