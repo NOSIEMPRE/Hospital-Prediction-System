@@ -39,10 +39,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: trained-model
-          path: .
+          path: 06-cicd
 
       - name: Verify downloaded artifact
         run: |
+          echo "=== Workspace root ==="
+          ls -la .
           echo "=== 06-cicd/ top-level ==="
           ls -la 06-cicd/
           echo "=== models/ ==="
