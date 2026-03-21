@@ -1,16 +1,14 @@
-# Render.com deployment manifest
-# Use with: New → Web Service → Deploy an existing image from a registry
-# Image URL: ghcr.io/<your-github-user>/<your-repo-name>
-
 services:
   - type: web
-    name: hospital-readmission-api
-    runtime: docker
-    # Set this to your GHCR image URL after first deploy
-    # dockerImage: ghcr.io/<owner>/<repo>:latest
-    region: oregon
-    plan: free
-    healthCheckPath: /health
+    name: hospital-risk-platform
+    env: docker
+    dockerfilePath: 06-cicd/frontend/Dockerfile
+    dockerContext: 06-cicd/frontend
+    autoDeploy: false
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.12"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: ML_API_URL
+        value: https://hospital-readmission-risk-predictor-pcv7.onrender.com

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import numpy as np
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -245,10 +246,20 @@ def predict(patient: PatientRequest, request: Request):
             vectorizer = model.named_steps["vectorizer"]
             classifier = model.named_steps["classifier"]
             
-            # Extract features as dense array for SHAP
+            # Extract features as dict for SHAP calculation
             feature_matrix = vectorizer.transform([feature_dict]).toarray()
             explainer = shap.TreeExplainer(classifier)
-            shap_raw = explainer.shap_values(feature_matrix)[0]
+            shap_result = explainer.shap_values(feature_matrix)
+            
+            # Extract SHAP values - handle different SHAP output formats (v0.4x)
+            if isinstance(shap_result, list):
+                # Binary classification often returns [neg_class_shap, pos_class_shap]
+                shap_raw = shap_result[1][0] if len(shap_result) > 1 else shap_result[0][0]
+            elif isinstance(shap_result, np.ndarray) and len(shap_result.shape) == 3:
+                # Some versions return (n_samples, n_features, n_classes)
+                shap_raw = shap_result[0, :, 1] if shap_result.shape[2] > 1 else shap_result[0, :, 0]
+            else:
+                shap_raw = shap_result[0]
             
             # Extract base value appropriately
             expected_val = explainer.expected_value
@@ -258,7 +269,6 @@ def predict(patient: PatientRequest, request: Request):
             
             # Map back to semantic feature names
             feature_names = vectorizer.dv.get_feature_names_out()
-            # Only return top 15 most impactful features to save JSON bloat
             shap_dict = {str(k): float(v) for k, v in zip(feature_names, shap_raw) if abs(v) > 0.001}
             shap_output = shap_dict
         except Exception as e:
@@ -283,6 +293,53 @@ def predict(patient: PatientRequest, request: Request):
         logger.error("Prediction failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
 
+@app.post("/predict/batch", response_model=list[PredictionResponse])
+def predict_batch(patients: list[PatientRequest], request: Request):
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded. Check /health.")
+    results = []
+    for patient in patients:
+        try:
+            # Reusing main logic simplified since SHAP per-row in batch is heavy, but supported here
+            feature_dict = patient.model_dump()
+            pred_proba = model.predict_proba([feature_dict])[0, 1]
+            
+            # Simple shap for batch
+            shap_output = None
+            try:
+                import shap
+                vectorizer = model.named_steps["vectorizer"]
+                classifier = model.named_steps["classifier"]
+                feature_matrix = vectorizer.transform([feature_dict]).toarray()
+                explainer = shap.TreeExplainer(classifier)
+                shap_result = explainer.shap_values(feature_matrix)
+                
+                # Extract SHAP values - handle different SHAP output formats (v0.4x)
+                if isinstance(shap_result, list):
+                    shap_raw = shap_result[1][0] if len(shap_result) > 1 else shap_result[0][0]
+                elif isinstance(shap_result, np.ndarray) and len(shap_result.shape) == 3:
+                    shap_raw = shap_result[0, :, 1] if shap_result.shape[2] > 1 else shap_result[0, :, 0]
+                else:
+                    shap_raw = shap_result[0]
+
+                feature_names = vectorizer.dv.get_feature_names_out()
+                shap_dict = {str(k): float(v) for k, v in zip(feature_names, shap_raw) if abs(v) > 0.001}
+                shap_output = shap_dict
+            except:
+                pass
+
+            results.append(PredictionResponse(
+                risk_score=float(pred_proba),
+                model_version=RUN_ID or "unknown",
+                shap_values=shap_output,
+                base_value=None
+            ))
+        except Exception as e:
+            logger.warning("Batch prediction item failed: %s", e)
+            results.append(PredictionResponse(risk_score=0.0, model_version="error"))
+            
+    return results
+
 
 if __name__ == "__main__":
     import uvicorn
@@ -292,5 +349,5 @@ if __name__ == "__main__":
         "app:app",
         host=api_cfg.get("host", "0.0.0.0"),
         port=api_cfg.get("port", 9696),
-        reload=True,
+        reload=False,
     )
