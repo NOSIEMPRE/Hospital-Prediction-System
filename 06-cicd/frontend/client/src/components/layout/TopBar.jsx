@@ -129,7 +129,7 @@ export default function TopBar() {
                     <div className="flex items-center gap-3 text-text-muted">
                       <BookOpen size={16} className="text-accent" />
                       <span className="text-[11px] leading-relaxed italic">
-                        "{currentUser.bio}"
+                        &quot;{currentUser.bio}&quot;
                       </span>
                     </div>
                   </div>

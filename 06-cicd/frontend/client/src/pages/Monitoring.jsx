@@ -3,7 +3,6 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, 
 import { Server, Activity, Database, Shield } from 'lucide-react';
 import PageTransition from '../components/layout/PageTransition';
 import useAppStore from '../store/appStore';
-import api from '../api/client';
 
 // Simulated histogram data for Recharts
 const distData = [
@@ -21,15 +20,12 @@ const distData = [
 
 export default function Monitoring() {
   const { apiHealth } = useAppStore();
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState(() => Array.from({length: 20}, (_, i) => ({
+    time: new Date(Date.now() - (20-i)*30000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    latency: Math.floor(Math.random() * 100) + 140
+  })));
 
   useEffect(() => {
-    const initialLogs = Array.from({length: 20}, (_, i) => ({
-      time: new Date(Date.now() - (20-i)*30000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      latency: Math.floor(Math.random() * 100) + 140
-    }));
-    setLogs(initialLogs);
-    
     const interval = setInterval(() => {
       setLogs(curr => {
         const next = [...curr.slice(1), {

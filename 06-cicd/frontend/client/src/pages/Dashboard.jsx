@@ -17,6 +17,8 @@ const sparkData = [
   { time: '18:00', val: 65 },
 ];
 
+const mockScores = [1,2,3,4,5].map(() => Math.random());
+
 export default function Dashboard() {
   const { setApiHealth } = useAppStore();
   const [latency, setLatency] = useState(0);
@@ -27,7 +29,7 @@ export default function Dashboard() {
         const { data } = await api.get('/health');
         setApiHealth({ status: data.status, model_loaded: data.model_loaded });
         setLatency(data.latency_ms);
-      } catch (err) {
+      } catch {
         setApiHealth({ status: 'offline', model_loaded: false });
         setLatency(0);
       }
@@ -130,8 +132,8 @@ export default function Dashboard() {
                  </tr>
                </thead>
                <tbody>
-                 {[1,2,3,4,5].map((item) => {
-                   const score = Math.random();
+                 {[1,2,3,4,5].map((item, idx) => {
+                   const score = mockScores[idx];
                    return (
                    <tr key={item} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                      <td className="py-5 px-4 font-mono text-sm text-text">PT-{(100800 + item)}</td>
