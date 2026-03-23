@@ -22,7 +22,7 @@
 
 ## 1. Project Overview
 
-This project builds a **production-grade MLOps system** that predicts whether a diabetic hospital patient will be readmitted within 30 days of discharge. It is not just a model — it is a complete pipeline from raw data to a live API deployed on the cloud.
+This project builds a **production-grade MLOps system** that predicts whether a diabetic hospital patient will be readmitted within 30 days of discharge. It is not just a model. It is a complete pipeline from raw data to a live API deployed on the cloud.
 
 The project is organized into 6 phases:
 
@@ -41,14 +41,14 @@ The **main deliverable** lives in `06-cicd/`. Everything in phases 1–5 is the 
 
 ## 2. Data
 
-Before any model can be built, we need to understand what data we have, what it means, and where the tricky parts are. This section covers the raw dataset, how we clean it, and — most importantly — how we split it for training without accidentally cheating.
+Before any model can be built, it is necessary to understand what data is available, what it means, and where the tricky parts are. This section covers the raw dataset, how it is cleaned, and how it is split for training without accidentally introducing data leakage.
 
 **Dataset**: Diabetes 130-US Hospitals (UCI Repository, ID 296)
 
 - **Raw file**: `data/diabetic_data.csv`
 - **Size**: 101,766 patient encounters, covering 71,518 unique patients
 - **Time period**: 1999–2008, 130 US hospitals
-- **Target variable**: `readmitted` — whether the patient was readmitted within 30 days
+- **Target variable**: `readmitted` (whether the patient was readmitted within 30 days)
 
 ### Target Encoding
 
@@ -61,7 +61,7 @@ In `train.py`, it is converted into a **binary target**:
 ```python
 df["target"] = df["readmitted"].isin(["30", "<30"]).astype(int)
 ```
-**Positive rate ≈ 11.2%** — the dataset is heavily class-imbalanced.
+**Positive rate ≈ 11.2%.** The dataset is heavily class-imbalanced.
 
 ### Key Data Quality Issues
 
@@ -77,7 +77,7 @@ df["target"] = df["readmitted"].isin(["30", "<30"]).astype(int)
 
 ### Train/Validation Split — Patient-Level
 
-This is a **critical design decision**. A naive row-level split would allow the same patient to appear in both train and validation sets (since one patient may have multiple visits), causing **data leakage** — the model learns patient-specific patterns that don't generalize.
+This is a **critical design decision**. A naive row-level split would allow the same patient to appear in both train and validation sets, since one patient may have multiple visits. This causes **data leakage**: the model learns patient-specific patterns that do not generalize to unseen patients.
 
 The fix: split by **patient ID (`patient_nbr`)**, not by row:
 ```python
@@ -97,9 +97,9 @@ Result: **no patient appears in both sets**. The `stratify` parameter ensures th
 
 ## 3. Feature Engineering
 
-Raw data cannot be fed directly into XGBoost. This section explains which 20 features we selected, why we engineered two derived features, and how `DictVectorizer` bridges the gap between Python dictionaries and the numerical matrix that the model expects.
+Raw data cannot be fed directly into XGBoost. This section explains which 20 features were selected, why two derived features were engineered, and how `DictVectorizer` converts Python dictionaries into the numerical matrix the model expects.
 
-The key insight here is that we keep the data as **a list of dictionaries** all the way until the vectorization step. This makes the code easy to read and the features easy to inspect — each dictionary maps a feature name to its value, exactly as the model will receive it in production.
+Data is kept as **a list of dictionaries** all the way through to the vectorization step. This makes the code straightforward to read and the features easy to inspect, since each dictionary maps a feature name to its value exactly as the model will receive it in production.
 
 After cleaning, 20 features are selected for the model. These are defined in `FEATURE_COLS` in `train.py`.
 
@@ -160,11 +160,9 @@ List of dicts → DictVectorizerWrapper → sparse matrix → XGBoostClassifier
 
 ## 4. Experiment Tracking with MLflow
 
-When you train a model multiple times — tuning hyperparameters, trying different features, experimenting with thresholds — it becomes impossible to remember which configuration produced which result. MLflow solves this by automatically recording every run in a structured database.
+When a model is trained multiple times (tuning hyperparameters, trying different features, adjusting thresholds), it quickly becomes impossible to remember which configuration produced which result. MLflow solves this by automatically recording every run in a structured database.
 
-Think of MLflow as a **lab notebook for machine learning**: every time you run `train.py`, it creates a new entry with all the settings you used and the metrics you got. You can go back later, compare runs side by side, and promote the best one to production — all from a browser UI.
-
-MLflow is used to track every training run — parameters, metrics, and the model artifact itself. This makes experiments **reproducible and comparable**.
+Every time `train.py` runs, MLflow creates a new entry with the settings used and the metrics produced. Runs can be compared side by side and the best one can be promoted to production, all from a browser UI. MLflow tracks every training run, including parameters, metrics, and the model artifact itself, making experiments **reproducible and comparable**.
 
 ### MLflow Setup
 
@@ -196,10 +194,10 @@ The `run_id` from each run is saved to `run_id.txt` for the API to reference at 
 
 ### Why PR-AUC as Primary Metric?
 
-With only 11.2% positive cases, **accuracy is misleading** — a model that always predicts "no readmission" achieves 88.8% accuracy while being completely useless.
+With only 11.2% positive cases, **accuracy is misleading**. A model that always predicts "no readmission" achieves 88.8% accuracy while being completely useless.
 
 - **ROC-AUC**: measures overall discrimination ability
-- **PR-AUC (Precision-Recall AUC)**: measures performance specifically on the **positive class** — much more informative for imbalanced datasets
+- **PR-AUC (Precision-Recall AUC)**: measures performance specifically on the **positive class**, which is much more informative for imbalanced datasets
 
 **Baseline** (Logistic Regression, Phase 1): PR-AUC ≈ 0.189
 **Tuned** (XGBoost + Optuna, Phase 3): PR-AUC > 0.189 (promotion threshold)
@@ -217,13 +215,13 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5001
 
 ## 5. Model Training
 
-This is the core of the ML system. We use XGBoost — a gradient boosting algorithm that builds an ensemble of decision trees, where each tree corrects the errors of the previous one. It is well-suited for tabular data with class imbalance, which is exactly what we have here.
+This is the core of the ML system. XGBoost is a gradient boosting algorithm that builds an ensemble of decision trees, where each tree corrects the errors of the previous one. It is well-suited for tabular data with class imbalance, which is exactly what this dataset presents.
 
 Three things make this training step more than just "fit a model":
 
-1. **The sklearn Pipeline** bundles vectorization and classification into a single object — so saving and loading the model is atomic.
+1. **The sklearn Pipeline** bundles vectorization and classification into a single object. Saving and loading the model is therefore atomic.
 2. **`scale_pos_weight`** compensates for the 11% positive rate so the model doesn't just learn to always predict "no readmission".
-3. **The quality gate** enforces a minimum PR-AUC before anything is saved — a degraded model can never reach production.
+3. **The quality gate** enforces a minimum PR-AUC before anything is saved. A model that does not pass is never written to disk.
 
 The final model is an **XGBoost classifier** wrapped in a scikit-learn `Pipeline`. It is trained in `train.py` with parameters from `config.yaml`.
 
@@ -273,7 +271,7 @@ model:
 if pr_auc < min_pr_auc:
     raise ModelQualityError(f"PR-AUC {pr_auc:.4f} below threshold {min_pr_auc}")
 ```
-If the model does not meet the minimum PR-AUC of 0.15, training **fails with an error** — the model is never saved and CI/CD is blocked. This prevents a degraded model from reaching production.
+If the model does not meet the minimum PR-AUC of 0.15, training raises a `ModelQualityError`. The model is never saved and the CI/CD pipeline exits with a failure, blocking deployment.
 
 ### Model Saving
 
@@ -317,13 +315,13 @@ python train.py
 
 ## 6. Model Serving with FastAPI
 
-Training a model locally is not enough — it needs to be accessible over the network so that any frontend, script, or downstream system can use it without knowing anything about Python or XGBoost. This is what FastAPI does: it wraps the model in an HTTP server that accepts JSON requests and returns JSON responses.
+Training a model locally is not enough. It needs to be accessible over the network so that any frontend, script, or downstream system can use it without knowing anything about Python or XGBoost. FastAPI wraps the model in an HTTP server that accepts JSON requests and returns JSON responses.
 
-FastAPI was chosen over Flask or Django because it is **asynchronous by default**, has **automatic request validation** via Pydantic, and **auto-generates interactive API documentation** — which means you can test the API directly in a browser without writing any client code.
+FastAPI was chosen over Flask or Django for three reasons. It is asynchronous by default, which improves throughput under concurrent load. It validates every request automatically via Pydantic, rejecting invalid inputs before they reach the model. It also generates interactive API documentation at `/docs`, allowing anyone to test the API directly in a browser without writing client code.
 
-Beyond basic serving, `app.py` adds three production features: SHAP explainability (so the model can explain its reasoning per prediction), prediction logging (an append-only audit trail), and CORS middleware (so the React frontend and Streamlit app can call the API from different browser origins).
+Beyond basic serving, `app.py` adds SHAP explainability (per-prediction feature attribution), an append-only prediction log for audit purposes, and CORS middleware so browser-based frontends on different ports can call the API.
 
-`app.py` is the **production API server**. It loads the trained model at startup and serves predictions over HTTP, with SHAP explainability, prediction logging, and request tracing.
+`app.py` is the **production API server**. It loads the trained model at startup and serves predictions over HTTP.
 
 ### Startup: Loading the Model
 
@@ -354,19 +352,19 @@ The `model`, `RUN_ID`, and `prediction_logger` are stored as module-level global
 
 Two middleware layers wrap every request:
 
-**CORS** — allows the React frontend and Streamlit app to call the API from a different origin (port):
+**CORS** — permits the React frontend and Streamlit app to call the API from a different browser origin (port):
 ```python
 app.add_middleware(CORSMiddleware, allow_origins=["*"], ...)
 ```
 
-**Request tracing** — every request is assigned a unique `X-Request-ID` UUID and response time is logged:
+**Request tracing** — each request gets a unique `X-Request-ID` UUID and the response time is written to the log:
 ```python
 logger.info("%s %s -> %d (%.1fms) [%s]", method, path, status, ms, request_id)
 ```
 
 ### API Endpoints
 
-**`GET /health`** — Health check, used by Render to verify the container is alive:
+**`GET /health`** — Health check. Render calls this periodically to verify the container is alive:
 ```json
 {
   "status": "ok",
@@ -427,7 +425,7 @@ return PredictionResponse(
 )
 ```
 
-**SHAP values** quantify each feature's contribution to the individual prediction. A positive SHAP value means the feature pushed the risk score up; negative means it pushed it down. This makes the model's reasoning **transparent and auditable**.
+**SHAP values** quantify each feature's contribution to the individual prediction. A positive value means the feature increased the risk score. A negative value means it reduced it. This makes the model's reasoning transparent and auditable.
 
 ### Prediction Logging
 
@@ -459,11 +457,11 @@ python app.py
 
 ## 7. Monitoring with Evidently
 
-Deploying a model is not the end of the story. In production, the world keeps changing: hospital coding practices evolve, new medications are introduced, patient demographics shift. If the data the model sees in production starts to look different from the data it was trained on, its predictions become unreliable — and the model degrades silently without raising any errors.
+Deploying a model is not the end of the story. In production, the world keeps changing: hospital coding practices evolve, new medications are introduced, patient demographics shift. When the data the model sees in production starts to diverge from the data it was trained on, its predictions become unreliable and the model degrades silently without raising any errors.
 
 Evidently addresses this by comparing the **training data distribution** against the **production data distribution** using statistical tests. If a feature drifts significantly, it flags it so the team knows it is time to retrain.
 
-In this project, Evidently runs as a batch job (not a live dashboard). You simulate production traffic, then generate a static HTML report that shows drift statistics for each feature.
+In this project, Evidently runs as a batch job rather than a live dashboard. Production traffic is simulated, and then a static HTML report is generated showing drift statistics for each feature.
 
 Phase 5 (`05-monitoring/`) adds **data drift detection** using the Evidently library. This addresses a common production problem: model performance degrades silently because the real-world data distribution shifts over time.
 
@@ -485,19 +483,17 @@ Phase 5 (`05-monitoring/`) adds **data drift detection** using the Evidently lib
 
 ### Why This Matters
 
-Without monitoring, the model might silently degrade because hospital admission practices changed, or new drug/diagnosis codes appear that were never in the training data. The team would only discover problems when patients are harmed.
+Without monitoring, the model can degrade silently because hospital admission practices changed, or because new drug and diagnosis codes appear that were never in the training data. The team would only discover problems after harm has occurred.
 
-With Evidently: drift is caught early, triggering a retraining cycle.
+With Evidently, drift is caught early and triggers a retraining cycle.
 
 ---
 
 ## 8. Containerization with Docker
 
-When you run `python app.py` on your laptop, it works because you have Python 3.11, the right packages, and the model file all in the right places. But on someone else's machine — or on a cloud server — the environment is different, and things break.
+Running `python app.py` on a local machine works because the right version of Python, the correct packages, and the model file are all present. On a different machine or a cloud server, the environment differs and things break.
 
-Docker solves this by bundling the **application code, all dependencies, and the model** into a single image that runs identically everywhere. Think of it as a lightweight, portable computer inside your computer: it has its own filesystem, its own Python, its own packages.
-
-The `Dockerfile` describes exactly how to build this image — step by step. Once built, you can ship the image to any server (or cloud provider) and run it with a single command, with no setup required.
+Docker solves this by bundling the **application code, all dependencies, and the model** into a single image that runs identically everywhere. The image has its own filesystem, its own Python installation, and its own packages. The `Dockerfile` describes exactly how to build this image. Once built, the image can be shipped to any server or cloud provider and run with a single command, with no additional setup required.
 
 The `Dockerfile` packages everything needed to run the API into a single **portable, reproducible image**.
 
@@ -542,7 +538,7 @@ The model files (`models/model/`) are **copied into the image during `docker bui
 
 ### Layer Caching Optimization
 
-`requirements.txt` is copied and installed **before** the rest of the code. Docker caches each layer independently. If only `app.py` changes (not `requirements.txt`), Docker skips the slow `pip install` step on rebuild — saving several minutes per CI/CD run.
+`requirements.txt` is copied and installed **before** the rest of the code. Docker caches each layer independently. If only `app.py` changes but `requirements.txt` does not, Docker skips the slow `pip install` step on rebuild, saving several minutes per CI/CD run.
 
 ### Building and Running Locally
 
@@ -563,13 +559,13 @@ curl http://localhost:9696/health
 
 ## 9. CI/CD Pipeline
 
-CI/CD stands for **Continuous Integration / Continuous Deployment**. The idea is simple: every time someone pushes code, the system automatically verifies that nothing is broken and, if everything passes, deploys the new version to production.
+CI/CD stands for **Continuous Integration / Continuous Deployment**. Every time someone pushes code, the system automatically verifies that nothing is broken and, if everything passes, deploys the new version to production.
 
-Without CI/CD, the team would need to manually retrain the model, run tests, build the Docker image, push it to a registry, and trigger a deployment — every single time. With CI/CD, all of that happens automatically in response to a `git push`.
+Without CI/CD, every change would require manually retraining the model, running tests, building the Docker image, pushing it to a registry, and triggering a deployment. With CI/CD, all of that happens automatically on every `git push`.
 
-This is the **automation backbone** of the project. Every `git push` to `main` automatically triggers training, testing, and deployment — no manual steps needed.
+This is the **automation backbone** of the project. Every `git push` to `main` automatically triggers training, testing, and deployment, with no manual steps needed.
 
-The pipeline is defined in two GitHub Actions workflow files that work together. The reason they are split is **separation of concerns**: training and deploying are different responsibilities with different triggers. Training can be run independently (e.g., on a schedule) without deploying, and deployment should only happen after tests pass.
+The pipeline is defined in two GitHub Actions workflow files. They are split to keep concerns separate: training and deploying are different responsibilities with different triggers. Training can be run independently (for example, on a schedule) without deploying, and deployment should only happen after tests pass.
 
 ### Two Workflow Files
 
@@ -632,7 +628,7 @@ git push → main
 
 ### Why Two Jobs?
 
-The `train` step is extracted into a **reusable workflow** (`workflow_call`) so it can also be triggered independently — for example, on a nightly schedule or manually via `workflow_dispatch`. This follows the **separation of concerns** principle: training and deploying are separate responsibilities.
+The `train` step is extracted into a **reusable workflow** (`workflow_call`) so it can also be triggered independently, for example on a nightly schedule or manually via `workflow_dispatch`. Training and deploying are separate responsibilities with different triggers and should not be coupled into a single workflow.
 
 ### Artifact Passing Between Jobs
 
@@ -655,7 +651,7 @@ Jobs in GitHub Actions run on **separate virtual machines**. To pass the trained
     path: 06-cicd
 ```
 
-> **Important**: `upload-artifact@v4` strips common path prefixes. Files uploaded as `06-cicd/models/...` land as `models/...` in the artifact. When downloaded to `06-cicd/`, they become `06-cicd/models/...` again. This is why the workflow deletes any committed `06-cicd/models/` before downloading — to avoid conflicts.
+> **Important**: `upload-artifact@v4` strips common path prefixes. Files uploaded as `06-cicd/models/...` land as `models/...` in the artifact. When downloaded to `06-cicd/`, they become `06-cicd/models/...` again. This is why the workflow deletes any committed `06-cicd/models/` before downloading, to prevent path conflicts.
 
 ### Health Check Retry Loop
 
@@ -676,21 +672,21 @@ Two tags are pushed:
 ghcr.io/org/repo:latest          # always points to the newest build
 ghcr.io/org/repo:abc1234         # immutable, tied to this exact commit SHA
 ```
-The short SHA makes it possible to identify exactly which commit a running container was built from — critical for debugging production issues.
+The short SHA makes it possible to identify exactly which commit a running container was built from, which is useful for debugging production issues.
 
 ### Secrets
 
-The only secret needed is `GITHUB_TOKEN`, which GitHub Actions provides **automatically** — no manual configuration required. It is used to authenticate with GHCR (GitHub's container registry).
+The only secret needed is `GITHUB_TOKEN`, which GitHub Actions provides **automatically** with no manual configuration required. It is used to authenticate with GHCR (GitHub's container registry).
 
 ---
 
 ## 10. Cloud Deployment on Render
 
-Once the Docker image has been built and pushed to GitHub Container Registry (GHCR), it needs to run somewhere publicly accessible on the internet. That is what Render does.
+Once the Docker image has been built and pushed to GitHub Container Registry (GHCR), it needs to run somewhere publicly accessible on the internet. Render handles this.
 
-Render is a cloud hosting platform that can pull a Docker image from a registry and run it as a web service — handling HTTPS certificates, health checks, and automatic restarts automatically. For this project, we use its **free tier**, which is sufficient for demonstration purposes but has one important limitation: the service **sleeps after 15 minutes of inactivity** and takes 30–60 seconds to wake up on the next request (the "cold start" problem).
+Render is a cloud hosting platform that pulls a Docker image from a registry and runs it as a web service. It manages HTTPS certificates and restarts the container if it crashes. For this project, the **free tier** is used. It is sufficient for demonstration purposes, but the service sleeps after 15 minutes of inactivity and takes 30–60 seconds to wake up on the next request.
 
-The deployment configuration is declared in `render.yaml`, which means the service setup is **version-controlled** — any team member can reproduce the exact same deployment configuration.
+The deployment configuration is declared in `render.yaml`, which means the service setup is **version-controlled** and any team member can reproduce the exact same deployment configuration.
 
 **Render** is the cloud platform that hosts the Docker container and serves the API publicly.
 
@@ -821,7 +817,7 @@ The React + Node.js frontend (`frontend/`) proxies all API calls through a Node.
 
 ### Frontend Clients vs. Swagger UI
 
-All three interfaces call the same FastAPI `/predict` endpoint — they differ only in who calls it and how results are displayed:
+All three interfaces call the same FastAPI `/predict` endpoint. They differ in who makes the call and how results are displayed:
 
 | | Swagger UI (`/docs`) | Streamlit | React |
 |---|---|---|---|
@@ -830,7 +826,7 @@ All three interfaces call the same FastAPI `/predict` endpoint — they differ o
 | Interface | Auto-generated, raw JSON | Interactive dashboard with charts | Full web app, 5 pages |
 | SHAP display | Raw numbers | Plotly waterfall chart | Recharts horizontal bar chart |
 
-Swagger UI is a **developer tool** that FastAPI generates automatically — it is not a product interface. Streamlit and React are **frontend clients** built on top of the same API. They are not visualizations of Swagger UI; they are independent applications that happen to consume the same backend.
+Swagger UI is a **developer tool** that FastAPI generates automatically. It is not a product interface. Streamlit and React are **frontend clients** built on top of the same API. They are independent applications that consume the same backend, not visualizations of Swagger UI.
 
 ---
 
@@ -841,7 +837,7 @@ Swagger UI is a **developer tool** that FastAPI generates automatically — it i
 | Unit tests | `test_train.py` | Data preprocessing, feature extraction, DictVectorizer | No |
 | Integration tests | `test_api.py` | `/health` and `/predict` endpoints, response schema | Yes (Docker) |
 
-Unit tests are fast and safe to run anywhere — they only test Python functions in isolation. Integration tests require a running server, so they only run **inside CI/CD** after the Docker container has been started.
+Unit tests are fast and safe to run anywhere, testing Python functions in isolation. Integration tests require a running server, so they only run **inside CI/CD** after the Docker container has been started.
 
 ### Key Design Decisions (Summary)
 
