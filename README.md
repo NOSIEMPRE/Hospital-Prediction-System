@@ -307,6 +307,59 @@ See [WALKTHROUGH_EN.md](WALKTHROUGH_EN.md) for a full technical walkthrough of t
 
 ---
 
+## Pipeline Architecture
+
+```mermaid
+flowchart LR
+    DATA[("diabetic_data.csv\n101,766 records")]
+
+    subgraph TRAIN["Training  —  train.py"]
+        direction TB
+        FE["Feature Engineering\nDictVectorizer"] --> SPLIT["Stratified Split\n80/20 by patient"]
+        SPLIT --> MODEL["XGBoost Pipeline"]
+        MODEL --> QG{"Quality Gate\nPR-AUC >= 0.15"}
+        QG -- fail --> ERR["ModelQualityError\nblocks pipeline"]
+        QG -- pass --> MLFLOW["MLflow\ntrack metrics & artifacts"]
+        MLFLOW --> PKL["model.pkl"]
+    end
+
+    subgraph SERVE["Serving  —  app.py"]
+        direction TB
+        FASTAPI["FastAPI  :9696"]
+        FASTAPI --> P1["/predict"]
+        FASTAPI --> P2["/predict/batch"]
+        FASTAPI --> P3["/health"]
+        FASTAPI --> LOG["predictions.log"]
+    end
+
+    subgraph CICD["CI/CD  —  GitHub Actions"]
+        direction TB
+        GH["git push to main"] --> PIPE["lint → train → test"]
+        PIPE --> DOCKER["Docker image\nbaked model → GHCR"]
+        DOCKER --> RENDER["Render\ncloud deployment"]
+    end
+
+    subgraph CLIENTS["Frontends"]
+        direction TB
+        ST["Streamlit  :8501"]
+        REACT["React  :5173"] --> PROXY["Node.js Proxy  :3001"]
+    end
+
+    subgraph MONITOR["Monitoring  —  Evidently"]
+        direction TB
+        SIM["simulate.py"] --> MON["monitor.py"]
+        MON --> REPORT["monitoring_report.html"]
+    end
+
+    DATA --> TRAIN
+    PKL --> SERVE
+    PKL --> CICD
+    SERVE --> CLIENTS
+    SERVE --> MONITOR
+```
+
+---
+
 ## References
 
 - Strack, B., et al. (2014). Impact of HbA1c Measurement on Hospital Readmission Rates. *BioMed Research International*.
