@@ -864,6 +864,61 @@ Unit tests are fast and safe to run anywhere, testing Python functions in isolat
 
 ---
 
+## 12. File Reference
+
+A quick-reference guide to every notebook and Python file in the project, organized by folder.
+
+### 01-initial-notebook/
+
+| File | What it does |
+| --- | --- |
+| `eda_diabetes_readmission.ipynb` | Exploratory data analysis: missing values, target distribution, demographics, lab results, medications, and readmission patterns across 101,766 encounters |
+| `hospital_readmission_prediction.ipynb` | Baseline ML workflow: stratified 80/20 split, DictVectorizer encoding, Logistic Regression as the first benchmark model |
+
+### 02-data-sampling-feature/
+
+| File | What it does |
+| --- | --- |
+| `hospital_readmission_data_fe.ipynb` | Advanced feature engineering: patient-level 70/15/15 split, ICD-9 to CCS category mapping, Charlson Comorbidity Index, medication burden scoring, lab ordinal encoding |
+| `features.ipynb` | Full preprocessing pipeline: drops weight column, filters deceased encounters, collapses 700+ diagnosis codes into 14 clinical categories, computes care intensity and medication flags |
+
+### 03-experiment-tracking/
+
+| File | What it does |
+| --- | --- |
+| `scenario-1.ipynb` | MLflow baseline experiment: trains Logistic Regression, logs PR-AUC (0.189), ROC-AUC, recall, and confusion matrix artifacts |
+| `scenario-2.ipynb` | Optuna hyperparameter search over XGBoost and LightGBM (5 trials each), logs all runs to MLflow, promotes best model (LightGBM PR-AUC = 0.216) if it beats the baseline |
+
+### 04-deployment/
+
+| File | What it does |
+| --- | --- |
+| `train.py` | Trains the model: patient-level split, DictVectorizerWrapper, XGBoost Pipeline, MLflow logging, writes `run_id.txt` for the API to load |
+| `app.py` | FastAPI service: loads model from MLflow via `run_id.txt`, exposes `/predict` and `/health`, returns risk scores |
+| `test_api.py` | Integration tests for `/health` and `/predict`: validates response codes, JSON schema, risk score range, and model versioning |
+
+### 05-monitoring/
+
+| File | What it does |
+| --- | --- |
+| `train.py` | Same as `04-deployment/train.py` but logs to a separate MLflow experiment (`hospital-readmission-monitoring`) |
+| `app.py` | Extends the deployment API with a `PredictionLogger` class that appends to CSV, adds `X-Request-ID` header tracing, and CORS middleware |
+| `simulate.py` | Production simulator: sends ~100 real patient records to `/predict` and writes results with timestamps to `predictions.csv` for drift analysis |
+| `monitor.py` | Evidently drift report: splits logged predictions into reference/current sets, generates an HTML report on data drift and classification performance |
+| `test_api.py` | API test suite: checks `model_loaded` flag, full response schema with `risk_score` and `model_version` |
+
+### 06-cicd/
+
+| File | What it does |
+| --- | --- |
+| `train.py` | CI/CD training script: adds automated quality gate (PR-AUC ≥ 0.15), strict data validation, saves artifacts to `models/model/` for Docker build |
+| `app.py` | Production FastAPI service: loads model baked into Docker image, logs predictions to CSV, full CORS and error handling for cloud deployment |
+| `streamlit_app.py` | Streamlit clinical dashboard: custom navy CSS theme, patient intake form, batch scoring, system monitoring with Plotly charts |
+| `test_api.py` | Comprehensive test suite: health endpoint (status, model_loaded, run_id), predict endpoint (risk score range, model version), sample patient validation |
+| `test_train.py` | Unit tests for training functions: DictVectorizerWrapper, data preprocessing, feature extraction — no server required |
+
+---
+
 *Document updated: 2026-03-23*
 *Project: IE MLOps Group Project — Team 3*
 *Stack: XGBoost · FastAPI · MLflow · Docker · GitHub Actions · Render · Streamlit · React + Node.js*
