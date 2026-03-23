@@ -41,6 +41,8 @@ The **main deliverable** lives in `06-cicd/`. Everything in phases 1–5 is the 
 
 ## 2. Data
 
+Before any model can be built, we need to understand what data we have, what it means, and where the tricky parts are. This section covers the raw dataset, how we clean it, and — most importantly — how we split it for training without accidentally cheating.
+
 **Dataset**: Diabetes 130-US Hospitals (UCI Repository, ID 296)
 
 - **Raw file**: `data/diabetic_data.csv`
@@ -94,6 +96,10 @@ Result: **no patient appears in both sets**. The `stratify` parameter ensures th
 ---
 
 ## 3. Feature Engineering
+
+Raw data cannot be fed directly into XGBoost. This section explains which 20 features we selected, why we engineered two derived features, and how `DictVectorizer` bridges the gap between Python dictionaries and the numerical matrix that the model expects.
+
+The key insight here is that we keep the data as **a list of dictionaries** all the way until the vectorization step. This makes the code easy to read and the features easy to inspect — each dictionary maps a feature name to its value, exactly as the model will receive it in production.
 
 After cleaning, 20 features are selected for the model. These are defined in `FEATURE_COLS` in `train.py`.
 
@@ -154,6 +160,10 @@ List of dicts → DictVectorizerWrapper → sparse matrix → XGBoostClassifier
 
 ## 4. Experiment Tracking with MLflow
 
+When you train a model multiple times — tuning hyperparameters, trying different features, experimenting with thresholds — it becomes impossible to remember which configuration produced which result. MLflow solves this by automatically recording every run in a structured database.
+
+Think of MLflow as a **lab notebook for machine learning**: every time you run `train.py`, it creates a new entry with all the settings you used and the metrics you got. You can go back later, compare runs side by side, and promote the best one to production — all from a browser UI.
+
 MLflow is used to track every training run — parameters, metrics, and the model artifact itself. This makes experiments **reproducible and comparable**.
 
 ### MLflow Setup
@@ -206,6 +216,14 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5001
 ---
 
 ## 5. Model Training
+
+This is the core of the ML system. We use XGBoost — a gradient boosting algorithm that builds an ensemble of decision trees, where each tree corrects the errors of the previous one. It is well-suited for tabular data with class imbalance, which is exactly what we have here.
+
+Three things make this training step more than just "fit a model":
+
+1. **The sklearn Pipeline** bundles vectorization and classification into a single object — so saving and loading the model is atomic.
+2. **`scale_pos_weight`** compensates for the 11% positive rate so the model doesn't just learn to always predict "no readmission".
+3. **The quality gate** enforces a minimum PR-AUC before anything is saved — a degraded model can never reach production.
 
 The final model is an **XGBoost classifier** wrapped in a scikit-learn `Pipeline`. It is trained in `train.py` with parameters from `config.yaml`.
 
@@ -298,6 +316,12 @@ python train.py
 ---
 
 ## 6. Model Serving with FastAPI
+
+Training a model locally is not enough — it needs to be accessible over the network so that any frontend, script, or downstream system can use it without knowing anything about Python or XGBoost. This is what FastAPI does: it wraps the model in an HTTP server that accepts JSON requests and returns JSON responses.
+
+FastAPI was chosen over Flask or Django because it is **asynchronous by default**, has **automatic request validation** via Pydantic, and **auto-generates interactive API documentation** — which means you can test the API directly in a browser without writing any client code.
+
+Beyond basic serving, `app.py` adds three production features: SHAP explainability (so the model can explain its reasoning per prediction), prediction logging (an append-only audit trail), and CORS middleware (so the React frontend and Streamlit app can call the API from different browser origins).
 
 `app.py` is the **production API server**. It loads the trained model at startup and serves predictions over HTTP, with SHAP explainability, prediction logging, and request tracing.
 
@@ -435,6 +459,12 @@ python app.py
 
 ## 7. Monitoring with Evidently
 
+Deploying a model is not the end of the story. In production, the world keeps changing: hospital coding practices evolve, new medications are introduced, patient demographics shift. If the data the model sees in production starts to look different from the data it was trained on, its predictions become unreliable — and the model degrades silently without raising any errors.
+
+Evidently addresses this by comparing the **training data distribution** against the **production data distribution** using statistical tests. If a feature drifts significantly, it flags it so the team knows it is time to retrain.
+
+In this project, Evidently runs as a batch job (not a live dashboard). You simulate production traffic, then generate a static HTML report that shows drift statistics for each feature.
+
 Phase 5 (`05-monitoring/`) adds **data drift detection** using the Evidently library. This addresses a common production problem: model performance degrades silently because the real-world data distribution shifts over time.
 
 ### Workflow
@@ -462,6 +492,12 @@ With Evidently: drift is caught early, triggering a retraining cycle.
 ---
 
 ## 8. Containerization with Docker
+
+When you run `python app.py` on your laptop, it works because you have Python 3.11, the right packages, and the model file all in the right places. But on someone else's machine — or on a cloud server — the environment is different, and things break.
+
+Docker solves this by bundling the **application code, all dependencies, and the model** into a single image that runs identically everywhere. Think of it as a lightweight, portable computer inside your computer: it has its own filesystem, its own Python, its own packages.
+
+The `Dockerfile` describes exactly how to build this image — step by step. Once built, you can ship the image to any server (or cloud provider) and run it with a single command, with no setup required.
 
 The `Dockerfile` packages everything needed to run the API into a single **portable, reproducible image**.
 
@@ -527,7 +563,13 @@ curl http://localhost:9696/health
 
 ## 9. CI/CD Pipeline
 
+CI/CD stands for **Continuous Integration / Continuous Deployment**. The idea is simple: every time someone pushes code, the system automatically verifies that nothing is broken and, if everything passes, deploys the new version to production.
+
+Without CI/CD, the team would need to manually retrain the model, run tests, build the Docker image, push it to a registry, and trigger a deployment — every single time. With CI/CD, all of that happens automatically in response to a `git push`.
+
 This is the **automation backbone** of the project. Every `git push` to `main` automatically triggers training, testing, and deployment — no manual steps needed.
+
+The pipeline is defined in two GitHub Actions workflow files that work together. The reason they are split is **separation of concerns**: training and deploying are different responsibilities with different triggers. Training can be run independently (e.g., on a schedule) without deploying, and deployment should only happen after tests pass.
 
 ### Two Workflow Files
 
@@ -643,6 +685,12 @@ The only secret needed is `GITHUB_TOKEN`, which GitHub Actions provides **automa
 ---
 
 ## 10. Cloud Deployment on Render
+
+Once the Docker image has been built and pushed to GitHub Container Registry (GHCR), it needs to run somewhere publicly accessible on the internet. That is what Render does.
+
+Render is a cloud hosting platform that can pull a Docker image from a registry and run it as a web service — handling HTTPS certificates, health checks, and automatic restarts automatically. For this project, we use its **free tier**, which is sufficient for demonstration purposes but has one important limitation: the service **sleeps after 15 minutes of inactivity** and takes 30–60 seconds to wake up on the next request (the "cold start" problem).
+
+The deployment configuration is declared in `render.yaml`, which means the service setup is **version-controlled** — any team member can reproduce the exact same deployment configuration.
 
 **Render** is the cloud platform that hosts the Docker container and serves the API publicly.
 
