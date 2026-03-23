@@ -124,13 +124,32 @@ streamlit run 06-cicd/streamlit_app.py
 
 ### 5. Run React frontend
 
-```bash
-# Terminal 1 — Node.js proxy
-cd 06-cicd/frontend/server && npm install && npm run dev
+The React frontend requires the FastAPI server (step 3) to be running first. Open **3 separate terminal windows** (no need to clone again — just `cd` into the same local folder from each window):
 
-# Terminal 2 — React client
-cd 06-cicd/frontend/client && npm install && npm run dev
-# → http://localhost:5173
+#### Terminal 1 — FastAPI (keep running from step 3)
+
+```bash
+cd 06-cicd
+python app.py
+# → API at http://localhost:9696
+```
+
+#### Terminal 2 — Node.js proxy
+
+```bash
+cd 06-cicd/frontend/server
+npm install
+npm run dev
+# → Proxy at http://localhost:3001
+```
+
+#### Terminal 3 — React client
+
+```bash
+cd 06-cicd/frontend/client
+npm install
+npm run dev
+# → UI at http://localhost:5173
 ```
 
 ### 6. Test via curl
