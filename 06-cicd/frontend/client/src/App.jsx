@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
@@ -8,9 +8,24 @@ import Batch from './pages/Batch';
 import Monitoring from './pages/Monitoring';
 import Login from './pages/Login';
 import useAppStore from './store/appStore';
+import api from './api/client';
 
 export default function App() {
-  const { currentUser } = useAppStore();
+  const { currentUser, setApiHealth } = useAppStore();
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const { data } = await api.get('/health', { timeout: 3000 });
+        setApiHealth({ status: data.status, model_loaded: data.model_loaded, latency_ms: data.latency_ms });
+      } catch {
+        setApiHealth({ status: 'offline', model_loaded: false, latency_ms: 0 });
+      }
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, [setApiHealth]);
 
   if (!currentUser) {
     return <Login />;

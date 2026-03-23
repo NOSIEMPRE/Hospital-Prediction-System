@@ -63,6 +63,19 @@ html, body, [class*="css"] {
     box-shadow: none !important;
 }
 
+/* Number input inner field */
+.stNumberInput input {
+    background-color: #1a243a !important;
+    color: #f8fafc !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Slider input */
+.stSlider input {
+    background-color: #1a243a !important;
+}
+
 /* Uppercase minimal labels */
 label {
     text-transform: uppercase !important;
@@ -261,7 +274,7 @@ def page_intake():
             </div>
             <div class="risk-labels"><span>Low</span><span>Moderate</span><span>High</span></div>
         </div>
-        <div class="risk-status-button" style="color: {status_color}; border-color: {status_color}40;">{status_text}</div>
+        {"" if st.session_state.last_score is None else f'<div class="risk-status-button" style="color: {status_color}; border-color: {status_color}40;">{status_text}</div>'}
     </div>
     """, unsafe_allow_html=True)
 
@@ -289,21 +302,18 @@ def page_intake():
             <div class="circle-num">2</div><p class="section-title">Hospital Visits & Procedures</p><p class="section-desc">Utilisation data</p>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown('<label>Days in hospital</label>', unsafe_allow_html=True)
-        time_in_hospital = st.slider("", 1, 14, 3, label_visibility="collapsed")
-        
+        time_in_hospital = st.slider("Days in hospital", 1, 14, 3)
+
         r2c1, r2c2, r2c3, r2c4 = st.columns(4)
-        with r2c1: 
-            num_lab_procedures = st.number_input("Lab procedures", min_value=0, value=41)
-            number_emergency = st.number_input("Emergency visits", min_value=0, value=0)
-        with r2c2: 
-            num_procedures = st.number_input("Other procedures", min_value=0, value=0)
-            number_inpatient = st.number_input("Inpatient visits", min_value=0, value=0)
-        with r2c3: 
-            num_medications = st.number_input("Medications", min_value=0, value=8)
-            number_outpatient = st.number_input("Outpatient visits", min_value=0, value=0)
-        with r2c4:
-            number_diagnoses = st.number_input("Diagnoses", min_value=0, value=9)
+        with r2c1: num_lab_procedures = st.number_input("Lab procedures", min_value=0, value=41)
+        with r2c2: num_procedures = st.number_input("Other procedures", min_value=0, value=0)
+        with r2c3: num_medications = st.number_input("Medications", min_value=0, value=8)
+        with r2c4: number_diagnoses = st.number_input("Diagnoses", min_value=0, value=9)
+
+        r2b1, r2b2, r2b3 = st.columns(3)
+        with r2b1: number_emergency = st.number_input("Emergency visits", min_value=0, value=0)
+        with r2b2: number_inpatient = st.number_input("Inpatient visits", min_value=0, value=0)
+        with r2b3: number_outpatient = st.number_input("Outpatient visits", min_value=0, value=0)
 
         # SECTION 3
         st.markdown("""
@@ -439,10 +449,31 @@ def page_monitor():
             with c3: st.metric("High-Risk Ratio", f"{(df_logs['risk_score'] > 0.6).mean() * 100:.1f}%")
             
             st.markdown("---")
-            st.markdown("**Risk Score Distribution**")
-            st.bar_chart(df_logs['risk_score'].value_counts(bins=20).sort_index())
+            fig_hist = go.Figure(go.Histogram(
+                x=df_logs['risk_score'],
+                nbinsx=20,
+                marker_color='#14b8a6',
+                marker_line_color='#0b1121',
+                marker_line_width=1,
+            ))
+            fig_hist.update_layout(
+                template='plotly_dark',
+                title="<b>Risk Score Distribution</b>",
+                title_font=dict(size=14, color="#f8fafc", family="Plus Jakarta Sans"),
+                xaxis_title="Risk Score",
+                yaxis_title="Number of Predictions",
+                xaxis=dict(range=[0, 1], tickformat=".0%"),
+                height=300,
+                margin=dict(l=10, r=10, t=40, b=20),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color="#94a3b8", family="Plus Jakarta Sans"),
+            )
+            st.plotly_chart(fig_hist, use_container_width=True)
             st.markdown("**Raw Pipeline Logs**")
-            st.dataframe(df_logs.sort_values("ts", ascending=False), use_container_width=True)
+            df_display = df_logs.sort_values("ts", ascending=False).copy()
+            df_display["model_version"] = df_display["model_version"].str[:8]
+            st.dataframe(df_display, use_container_width=True)
         else:
             st.info("Log is empty. Make a prediction in Patient Intake first.")
     else:

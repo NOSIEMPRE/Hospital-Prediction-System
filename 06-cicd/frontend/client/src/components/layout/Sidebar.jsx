@@ -61,13 +61,13 @@ export default function Sidebar() {
         
         <div className={`flex items-center justify-center p-3 rounded-xl bg-surface/50 border border-white/5 ${isSidebarOpen ? 'px-4 justify-start' : ''}`}>
           <div className="relative flex h-3 w-3">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${apiHealth.status === 'ok' ? 'bg-accent' : 'bg-danger'}`}></span>
-            <span className={`relative inline-flex rounded-full h-3 w-3 ${apiHealth.status === 'ok' ? 'bg-accent' : 'bg-danger'}`}></span>
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${apiHealth.status === 'ok' ? 'bg-accent' : apiHealth.status === 'unknown' ? 'bg-yellow-400' : 'bg-danger'}`}></span>
+            <span className={`relative inline-flex rounded-full h-3 w-3 ${apiHealth.status === 'ok' ? 'bg-accent' : apiHealth.status === 'unknown' ? 'bg-yellow-400' : 'bg-danger'}`}></span>
           </div>
           {isSidebarOpen && (
              <div className="ml-3 text-xs">
                <p className="font-semibold text-text">API Status</p>
-               <p className="text-text-muted font-mono">{apiHealth.status === 'ok' ? 'Connected' : 'Degraded'}</p>
+               <p className="text-text-muted font-mono">{apiHealth.status === 'ok' ? 'Connected' : apiHealth.status === 'unknown' ? 'Checking...' : 'Degraded'}</p>
              </div>
           )}
         </div>

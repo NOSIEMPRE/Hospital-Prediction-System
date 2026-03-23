@@ -724,7 +724,15 @@ The Streamlit dashboard (`streamlit_app.py`) has a sidebar toggle to switch betw
 - **Local API** (`http://localhost:9696`) — requires `python app.py` running locally
 - **Cloud API** (`https://hospital-readmission-risk-predictor-pcv7.onrender.com`) — no local setup, but subject to cold-start delays
 
-The React + Node.js frontend (`frontend/`) proxies all API calls through a Node.js Express server (port 3001) to the FastAPI backend.
+The React + Node.js frontend (`frontend/`) uses a 3-layer architecture:
+
+```text
+Browser (5173) → Node.js proxy (3001) → FastAPI (9696)
+```
+
+The React client never calls FastAPI directly. All requests go through the Node.js Express proxy (port 3001), which handles forwarding, CORS, and error handling. The proxy reads its target URL from a `.env` file (`ML_API_URL=http://localhost:9696`). Without this file, the proxy falls back to the Render cloud URL, which has cold-start delays.
+
+The React app polls the proxy's `/health` endpoint every 30 seconds to keep the API status indicator in the sidebar up to date.
 
 ### Local vs Production Comparison
 

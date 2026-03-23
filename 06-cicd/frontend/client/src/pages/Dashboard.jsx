@@ -26,7 +26,7 @@ export default function Dashboard() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const { data } = await api.get('/health');
+        const { data } = await api.get('/health', { timeout: 3000 });
         setApiHealth({ status: data.status, model_loaded: data.model_loaded });
         setLatency(data.latency_ms);
       } catch {

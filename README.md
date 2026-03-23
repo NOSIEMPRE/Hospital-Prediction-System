@@ -213,32 +213,53 @@ The sidebar lets you switch between **Local API** (`http://localhost:9696`, requ
 
 ### 6. Run React frontend
 
-The React frontend requires the FastAPI server (step 4) to be running first. Open **3 separate terminal windows** (no need to clone again — just `cd` into the same local folder from each window):
+The React frontend uses a 3-layer architecture. All 3 processes must be running at the same time:
 
-#### Terminal 1 — FastAPI (keep running from step 4)
+```text
+Browser (5173) → Node.js proxy (3001) → FastAPI (9696)
+```
+
+No need to clone again — open 3 separate terminal windows and `cd` into the same local folder from each.
+
+#### Terminal 1 — FastAPI ML API (keep running from step 4)
+
+Serves the machine learning model and handles predictions.
 
 ```bash
 cd 06-cicd
 python app.py
-# → API at http://localhost:9696
+# → http://localhost:9696
 ```
 
-#### Terminal 2 — Node.js proxy
+#### Terminal 2 — Node.js proxy (backend middleware)
+
+Sits between the React UI and FastAPI. Handles request forwarding, CORS, and error handling. The React app never calls FastAPI directly.
+
+Before starting, create the environment file:
 
 ```bash
 cd 06-cicd/frontend/server
-npm install
-npm run dev
-# → Proxy at http://localhost:3001
+echo 'ML_API_URL=http://localhost:9696' > .env
 ```
 
-#### Terminal 3 — React client
+Then start the proxy:
+
+```bash
+npm install
+npm run dev
+# → http://localhost:3001
+# You should see: 📡 ML API: http://localhost:9696
+```
+
+#### Terminal 3 — React client (UI)
+
+Renders the frontend pages in the browser. Sends all API calls to the Node.js proxy, not to FastAPI.
 
 ```bash
 cd 06-cicd/frontend/client
 npm install
 npm run dev
-# → UI at http://localhost:5173
+# → Open http://localhost:5173 in your browser
 ```
 
 ### 7. Deploy to Render (CI/CD)
