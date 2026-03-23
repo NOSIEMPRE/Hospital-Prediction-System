@@ -13,7 +13,8 @@ This project builds a machine learning system to predict 30-day readmission risk
 - **Dataset**: Diabetes 130-US Hospitals (UCI ML Repository, id 296) — Strack et al., 2014
 - **Target**: Binary classification — readmitted within 30 days (yes/no)
 - **Model**: XGBoost pipeline tracked with MLflow, quality-gated (PR-AUC ≥ 0.15)
-- **Live API**: [hospital-readmission-risk-predictor-pcv7.onrender.com](https://hospital-readmission-risk-predictor-pcv7.onrender.com)
+- **Live API docs**: [hospital-readmission-risk-predictor-pcv7.onrender.com/docs](https://hospital-readmission-risk-predictor-pcv7.onrender.com/docs)
+- **Walkthrough**: [WALKTHROUGH_EN.md](WALKTHROUGH_EN.md)
 
 ---
 
@@ -257,6 +258,25 @@ https://hospital-readmission-risk-predictor-pcv7.onrender.com/docs
 ```
 
 > Note: Render free tier has a cold-start delay of ~30–60 seconds after periods of inactivity.
+
+### 8. Run Evidently monitoring report
+
+Evidently generates a static HTML report comparing training data distribution against production traffic. It does **not** require a running server.
+
+```bash
+cd 05-monitoring
+python simulate.py   # simulate production traffic (calls the API ~100 times)
+python monitor.py    # generate monitoring_report.html
+open monitoring_report.html   # open in browser (Mac)
+```
+
+The report shows:
+
+- Feature drift (KS test / chi-squared for each input feature)
+- Target drift (has the readmission rate shifted?)
+- Model performance metrics (precision, recall, F1)
+
+> Evidently does not have a live web dashboard in this project — the output is a static HTML file generated on demand.
 
 ---
 
