@@ -771,6 +771,21 @@ The React + Node.js frontend (`frontend/`) proxies all API calls through a Node.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### Frontend Clients vs. Swagger UI
+
+All three interfaces call the same FastAPI `/predict` endpoint — they differ only in who calls it and how results are displayed:
+
+| | Swagger UI (`/docs`) | Streamlit | React |
+|---|---|---|---|
+| How it calls the API | Browser directly | Python `requests` library | Node.js proxy → fetch |
+| Target user | Developer / tester | Data analyst / clinical demo | End user / product demo |
+| Interface | Auto-generated, raw JSON | Interactive dashboard with charts | Full web app, 5 pages |
+| SHAP display | Raw numbers | Plotly waterfall chart | Recharts horizontal bar chart |
+
+Swagger UI is a **developer tool** that FastAPI generates automatically — it is not a product interface. Streamlit and React are **frontend clients** built on top of the same API. They are not visualizations of Swagger UI; they are independent applications that happen to consume the same backend.
+
+---
+
 ### Testing Strategy
 
 | Test Type | File | What it tests | Needs server? |
