@@ -99,7 +99,7 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 
 ```bash
 git clone https://github.com/NOSIEMPRE/Hospital-Prediction-System.git
-cd IE_MLOps_Group-Project_Team3
+cd Hospital-Prediction-System
 pip install -r 06-cicd/requirements.txt
 ```
 
