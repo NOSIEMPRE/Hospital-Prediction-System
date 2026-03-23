@@ -126,26 +126,95 @@ pip install -r 06-cicd/requirements.txt
 
 Download [Diabetes 130-US Hospitals](https://archive.ics.uci.edu/dataset/296) and place `diabetic_data.csv` in `data/`.
 
-### 3. Train and run API
+### 3. Train model (MLflow)
 
 ```bash
 cd 06-cicd
-python train.py    # trains model, enforces quality gate, writes run_id.txt
-python app.py      # starts API at http://localhost:9696
+python train.py
 ```
 
-### 4. Run Streamlit dashboard
+This will:
+
+- Run feature engineering and patient-level train/val split
+- Train an XGBoost pipeline tracked in MLflow (`mlruns/`)
+- Enforce the quality gate (PR-AUC ≥ 0.15) — raises `ModelQualityError` if not met
+- Save the model artifact to `models/model/` and write `run_id.txt`
+
+**View MLflow experiment UI** (optional, open in a separate terminal):
+
+```bash
+cd 06-cicd
+mlflow ui --backend-store-uri sqlite:///mlflow.db
+# → http://localhost:5000
+```
+
+Browse runs, compare metrics (PR-AUC, ROC-AUC), and inspect logged parameters.
+
+### 4. Run FastAPI
+
+```bash
+cd 06-cicd
+python app.py
+# → http://localhost:9696
+```
+
+Key endpoints:
+
+| Endpoint | Method | Description |
+| --- | --- | --- |
+| `/health` | GET | Model status and run ID |
+| `/predict` | POST | Single patient risk score + SHAP values |
+| `/predict/batch` | POST | Batch predictions |
+| `/docs` | GET | Interactive API documentation (Swagger UI) |
+
+**Interactive API docs** — open in browser after starting:
+
+```text
+http://localhost:9696/docs
+```
+
+Fill in patient fields and test `/predict` directly from the browser — no curl needed.
+
+**Prediction audit log** — every call to `/predict` is appended to:
+
+```bash
+cat 06-cicd/data/predictions.log
+```
+
+**Test via curl:**
+
+```bash
+curl http://localhost:9696/health
+
+curl -X POST http://localhost:9696/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "time_in_hospital": 3, "num_lab_procedures": 41,
+    "num_procedures": 0, "num_medications": 8,
+    "number_emergency": 0, "number_inpatient": 0,
+    "number_outpatient": 0, "number_diagnoses": 9,
+    "admission_type_id": 1, "discharge_disposition_id": 1,
+    "admission_source_id": 7, "age": "[50-60)",
+    "gender": "Female", "race": "Caucasian",
+    "change": "Ch", "diabetesMed": "Yes",
+    "A1Cresult": "not_tested", "max_glu_serum": "not_tested"
+  }'
+```
+
+### 5. Run Streamlit dashboard
 
 ```bash
 streamlit run 06-cicd/streamlit_app.py
 # → http://localhost:8501
 ```
 
-### 5. Run React frontend
+The sidebar lets you switch between **Local API** (`http://localhost:9696`, requires `app.py` running) and **Cloud API** (Render, no local setup needed but subject to cold-start delays).
 
-The React frontend requires the FastAPI server (step 3) to be running first. Open **3 separate terminal windows** (no need to clone again — just `cd` into the same local folder from each window):
+### 6. Run React frontend
 
-#### Terminal 1 — FastAPI (keep running from step 3)
+The React frontend requires the FastAPI server (step 4) to be running first. Open **3 separate terminal windows** (no need to clone again — just `cd` into the same local folder from each window):
+
+#### Terminal 1 — FastAPI (keep running from step 4)
 
 ```bash
 cd 06-cicd
@@ -171,26 +240,23 @@ npm run dev
 # → UI at http://localhost:5173
 ```
 
-### 6. Test via curl
+### 7. Deploy to Render (CI/CD)
 
-```bash
-curl http://localhost:9696/health
+Render deployment is triggered automatically by the CI/CD pipeline on every push to `main`. To trigger manually:
 
-curl -X POST http://localhost:9696/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "time_in_hospital": 3, "num_lab_procedures": 41,
-    "num_procedures": 0, "num_medications": 8,
-    "number_emergency": 0, "number_inpatient": 0,
-    "number_outpatient": 0, "number_diagnoses": 9,
-    "admission_type_id": 1, "discharge_disposition_id": 1,
-    "admission_source_id": 7, "age": "[50-60)",
-    "gender": "Female", "race": "Caucasian",
-    "change": "Ch", "diabetesMed": "Yes",
-    "medication_changed": 1,
-    "A1Cresult": "not_tested", "max_glu_serum": "not_tested"
-  }'
+1. Go to **GitHub Actions → CI/CD Pipeline**
+2. Click **Run workflow**
+
+The pipeline runs: lint → train → test → build Docker image → push to GHCR → deploy to Render.
+
+**Live API** (no local setup required):
+
+```text
+https://hospital-readmission-risk-predictor-pcv7.onrender.com/health
+https://hospital-readmission-risk-predictor-pcv7.onrender.com/docs
 ```
+
+> Note: Render free tier has a cold-start delay of ~30–60 seconds after periods of inactivity.
 
 ---
 
