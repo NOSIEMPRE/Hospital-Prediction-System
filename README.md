@@ -100,8 +100,27 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 ```bash
 git clone https://github.com/NOSIEMPRE/Hospital-Prediction-System.git
 cd Hospital-Prediction-System
+```
+
+It is recommended to create a dedicated virtual environment to avoid conflicts with your base environment:
+
+```bash
+# Option A — conda
+conda create -n mlops python=3.11
+conda activate mlops
+
+# Option B — venv
+python -m venv .venv
+source .venv/bin/activate   # Mac/Linux
+```
+
+Then install dependencies:
+
+```bash
 pip install -r 06-cicd/requirements.txt
 ```
+
+> Remember to activate the environment (`conda activate mlops` or `source .venv/bin/activate`) in every new terminal window before running any commands.
 
 ### 2. Download data
 
