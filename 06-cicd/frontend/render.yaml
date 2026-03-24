@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hospital-risk-platform
+    runtime: node
+    buildCommand: cd 06-cicd/frontend/client && npm install && npm run build && cd ../server && npm install
+    startCommand: node 06-cicd/frontend/server/src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ML_API_URL
+        sync: false   # set manually in Render dashboard
+      - key: PORT
+        value: 10000
+      - key: CLIENT_ORIGIN
+        sync: false   # set to your Render URL after first deploy
