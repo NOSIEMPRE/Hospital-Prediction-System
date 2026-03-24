@@ -13,9 +13,7 @@ This project builds a machine learning system to predict 30-day readmission risk
 - **Dataset**: Diabetes 130-US Hospitals (UCI ML Repository, id 296) — Strack et al., 2014
 - **Target**: Binary classification — readmitted within 30 days (yes/no)
 - **Model**: XGBoost pipeline tracked with MLflow, quality-gated (PR-AUC ≥ 0.15)
-- **Live API docs**: [hospital-prediction-system.onrender.com/docs](https://hospital-prediction-system.onrender.com/docs)
-- **Streamlit dashboard**: [hospital-prediction-system.streamlit.app](https://hospital-prediction-system.streamlit.app)
-- **React platform**: [hospital-prediction-system-1.onrender.com](https://hospital-prediction-system-1.onrender.com)
+- **Deployment**: FastAPI, Streamlit, and the React + Node stack can be deployed to Render (see `render.yaml` and CI/CD). **For project review and demos, please run the stack locally** using [Quick Start](#quick-start) below — Render’s **free tier** may spin down, cold-start slowly, or return gateway errors (e.g. 502/520), so we do **not** publish live URLs here.
 - **Walkthrough**: [WALKTHROUGH_EN.md](WALKTHROUGH_EN.md)
 
 ---
@@ -90,7 +88,7 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 | Dockerfile | ✅ |
 | CI/CD workflow (lint → test → build → push) | ✅ |
 | Render deployment manifest (`render.yaml`) | ✅ |
-| Live API on Render | ✅ |
+| Optional cloud deploy (Render; free tier unreliable for live demos) | ✅ |
 | Streamlit clinical dashboard | ✅ |
 | React + Node.js full-stack frontend | ✅ |
 
@@ -211,7 +209,7 @@ streamlit run 06-cicd/streamlit_app.py
 # → http://localhost:8501
 ```
 
-The sidebar lets you switch between **Local API** (`http://localhost:9696`, requires `app.py` running) and **Cloud API** (Render, no local setup needed but subject to cold-start delays).
+The sidebar lets you switch between **Local API** (`http://localhost:9696`, requires `app.py` running) and **Cloud API** (Render). Prefer **Local API** for demos: the cloud option is subject to cold starts and may intermittently fail on the free tier.
 
 ### 6. Run React frontend
 
@@ -273,16 +271,7 @@ Render deployment is triggered automatically by the CI/CD pipeline on every push
 
 The pipeline runs: lint → train → test → build Docker image → push to GHCR → deploy to Render.
 
-**Live services** (no local setup required):
-
-```text
-https://hospital-prediction-system.onrender.com/health       ← FastAPI
-https://hospital-prediction-system.onrender.com/docs         ← API docs
-https://hospital-prediction-system.streamlit.app             ← Streamlit dashboard
-https://hospital-prediction-system-1.onrender.com            ← React platform
-```
-
-> Note: Render free tier has a cold-start delay of ~30–60 seconds after periods of inactivity.
+**Cloud URLs** are managed in the Render dashboard (they can change between deploys). We intentionally **do not list production links in this README**: on the **free tier**, services sleep after inactivity, cold starts can take ~30–60+ seconds, and **Run Assessment** or other routes may intermittently return **502/520** — fine for development, but unreliable for graders opening a link during review. Use the **local Quick Start** above for a stable demo.
 
 ### 8. Run Evidently monitoring report
 
