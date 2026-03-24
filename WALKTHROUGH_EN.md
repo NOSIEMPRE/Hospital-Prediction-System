@@ -752,76 +752,91 @@ The React app polls the proxy's `/health` endpoint every 30 seconds to keep the 
 ### Complete Pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        DATA LAYER                                   │
-│  data/diabetic_data.csv                                             │
-│  101,766 encounters · 71,518 patients · 11.2% readmission rate     │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │ read_data() in train.py
-                             │ - drop weight column
-                             │ - fill missing values
-                             │ - encode target (binary)
-                             │ - derive care_intensity, medication_changed
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     FEATURE ENGINEERING                             │
-│  prepare_features() → list of 20-feature dicts                     │
-│  Patient-level stratified split (80% train / 20% val)              │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │ train_and_log() in train.py
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                       MODEL TRAINING                                │
-│  Pipeline:                                                          │
-│    DictVectorizerWrapper → sparse matrix                           │
-│    XGBClassifier (scale_pos_weight ≈ 8.1)                          │
-│                                                                     │
-│  Metrics logged to MLflow (mlflow.db):                             │
-│    PR-AUC, ROC-AUC, all hyperparams                                │
-│                                                                     │
-│  Artifacts saved:                                                   │
-│    06-cicd/models/model/  ← deployment copy                        │
-│    06-cicd/run_id.txt     ← traceability                           │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │ GitHub Actions (on push to main)
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         CI/CD PIPELINE                              │
-│                                                                     │
-│  [train.yml]  Train → Upload artifact (models/ + run_id.txt)       │
-│                                                                     │
-│  [ci-cd.yml]                                                        │
-│    Download artifact → Lint → Unit tests → Docker build            │
-│    → Integration tests → Push to GHCR:                             │
-│        ghcr.io/org/repo:latest                                      │
-│        ghcr.io/org/repo:<sha7>                                      │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │ Render polls GHCR for :latest
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    PRODUCTION (Render.com)                          │
-│                                                                     │
-│  Docker container running app.py via uvicorn                       │
-│  - Loads models/model/ at startup                                   │
-│  - Serves: GET /health · POST /predict · POST /predict/batch        │
-│  - SHAP explainability + prediction logging + CORS                  │
-│                                                                     │
-│  Public URL: hospital-readmission-risk-predictor-pcv7.onrender.com │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │ HTTP POST /predict
-                             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      USER INTERFACES                                │
-│                                                                     │
-│  streamlit_app.py  → http://localhost:8501                         │
-│  - Patient intake, batch processing, system monitoring              │
-│  - SHAP waterfall chart, risk gauge                                 │
-│  - Sidebar: switch between Local API / Cloud API                    │
-│                                                                     │
-│  React + Node.js  → http://localhost:5173                          │
-│  - 5-page dashboard (Login, Intake, Batch, Dashboard, Monitoring)  │
-│  - Node.js Express proxy (port 3001) → FastAPI (port 9696)         │
-└─────────────────────────────────────────────────────────────────────┘
++---------------------------------------------------------------------+
+|                           DATA LAYER                                |
+|                                                                     |
+|  data/diabetic_data.csv  (UCI Diabetes 130-US Hospitals)            |
+|  101,766 encounters  |  71,518 unique patients                      |
+|  Target: 30-day readmission  |  11.2% positive rate                |
++---------------------------------------------------------------------+
+                              |
+                              |  read_data()  in  train.py
+                              |  - drop sparse weight column
+                              |  - fill missing values
+                              |  - encode target as binary (0/1)
+                              |  - derive care_intensity, medication_changed
+                              v
++---------------------------------------------------------------------+
+|                      FEATURE ENGINEERING                            |
+|                                                                     |
+|  prepare_features()  ->  20-feature dict per encounter              |
+|  Patient-level stratified split  (80% train / 20% val)             |
+|  Split by patient_nbr to prevent data leakage                       |
++---------------------------------------------------------------------+
+                              |
+                              |  train_and_log()  in  train.py
+                              v
++---------------------------------------------------------------------+
+|                        MODEL TRAINING                               |
+|                                                                     |
+|  scikit-learn Pipeline:                                             |
+|    DictVectorizerWrapper  ->  sparse matrix                         |
+|    XGBClassifier  (scale_pos_weight ~8.1)                           |
+|                                                                     |
+|  Logged to MLflow:  PR-AUC,  ROC-AUC,  all hyperparameters         |
+|  Artifacts:  06-cicd/models/model/  |  06-cicd/run_id.txt          |
++---------------------------------------------------------------------+
+                              |
+                              |  quality gate check
+                              v
++---------------------------------------------------------------------+
+|                         QUALITY GATE                                |
+|                                                                     |
+|  PR-AUC < 0.15   ->  ModelQualityError raised  ->  pipeline stops  |
+|  PR-AUC >= 0.15  ->  artifact saved, proceed to CI/CD              |
++---------------------------------------------------------------------+
+                              |
+                              |  GitHub Actions  (on push to main)
+                              v
++---------------------------------------------------------------------+
+|                     CI/CD  (GitHub Actions)                         |
+|                                                                     |
+|  train.yml:                                                         |
+|    train model  ->  upload artifact  (models/ + run_id.txt)        |
+|                                                                     |
+|  ci-cd.yml:                                                         |
+|    download artifact  ->  lint  ->  unit tests                      |
+|    ->  Docker build  ->  integration tests  (live container)        |
+|    ->  push to GHCR:                                                |
+|        ghcr.io/org/repo:latest    (Render auto-deploy)              |
+|        ghcr.io/org/repo:<sha7>    (rollback snapshot)               |
++---------------------------------------------------------------------+
+                              |
+                              |  Render polls GHCR for :latest
+                              v
++---------------------------------------------------------------------+
+|                      PRODUCTION  (Render.com)                       |
+|                                                                     |
+|  Docker container:  app.py  via  uvicorn                            |
+|  GET /health  |  POST /predict  |  POST /predict/batch              |
+|  SHAP per prediction  |  prediction logging  |  CORS                |
+|                                                                     |
+|  https://hospital-prediction-system.onrender.com                    |
++---------------------------------------------------------------------+
+                              |
+                              |  HTTP POST /predict
+                              v
++---------------------------------------------------------------------+
+|                       USER INTERFACES                               |
+|                                                                     |
+|  Streamlit  (Python requests  ->  FastAPI)                          |
+|    https://hospital-prediction-system.streamlit.app                 |
+|    Patient intake  |  batch scoring  |  monitoring dashboard        |
+|                                                                     |
+|  React  (browser  ->  Node.js proxy  ->  FastAPI)                  |
+|    https://hospital-prediction-system-1.onrender.com                |
+|    Login, Dashboard, Intake, Batch, Monitoring                      |
++---------------------------------------------------------------------+
 ```
 
 ### Frontend Clients vs. Swagger UI
