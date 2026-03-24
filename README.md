@@ -28,14 +28,14 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 
 ## Project Roadmap
 
-| Phase | Module | Description |
-| ----- | ------ | ----------- |
-| 1 | [01-initial-notebook](01-initial-notebook/README.md) | EDA, baseline Logistic Regression |
-| 2 | [02-data-sampling-feature](02-data-sampling-feature/README.md) | Feature engineering, patient-level split |
-| 3 | [03-experiment-tracking](03-experiment-tracking/README.md) | MLflow, XGBoost/LightGBM, Optuna tuning |
-| 4 | [04-deployment](04-deployment/README.md) | FastAPI model serving |
-| 5 | [05-monitoring](05-monitoring/README.md) | Drift detection with Evidently |
-| 6 | [06-cicd](06-cicd/README.md) | CI/CD, Docker, GHCR, Render, Streamlit UI, React dashboard |
+| Phase | Module | Description | Contributors |
+| ----- | ------ | ----------- | ------------ |
+| 1 | [01-initial-notebook](01-initial-notebook/README.md) | EDA, baseline Logistic Regression | Marian, Lorenz |
+| 2 | [02-data-sampling-feature](02-data-sampling-feature/README.md) | Feature engineering, patient-level split | Yaxin, Omar |
+| 3 | [03-experiment-tracking](03-experiment-tracking/README.md) | MLflow, XGBoost/LightGBM, Optuna tuning | Marco, Yaxin, Jorge |
+| 4 | [04-deployment](04-deployment/README.md) | FastAPI model serving | Lorenz, Marco |
+| 5 | [05-monitoring](05-monitoring/README.md) | Drift detection with Evidently | Marian, Jorge |
+| 6 | [06-cicd](06-cicd/README.md) | CI/CD, Docker, GHCR, Render, Streamlit UI, React dashboard | Yaxin, Omar |
 
 ---
 
