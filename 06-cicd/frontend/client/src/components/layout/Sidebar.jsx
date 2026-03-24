@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Activity, LayoutDashboard, FileUp, ShieldAlert, ChevronLeft, ChevronRight, Server } from 'lucide-react';
 import useAppStore from '../../store/appStore';
 
@@ -14,9 +13,9 @@ const NavItem = ({ to, icon: Icon, label, isExpanded }) => (
   >
     <Icon size={24} className="min-w-6" />
     {isExpanded && (
-      <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ml-4 font-medium whitespace-nowrap">
+      <span className="ml-4 font-medium whitespace-nowrap transition-opacity duration-200">
         {label}
-      </motion.span>
+      </span>
     )}
   </NavLink>
 );
@@ -25,10 +24,9 @@ export default function Sidebar() {
   const { isSidebarOpen, toggleSidebar, apiHealth } = useAppStore();
 
   return (
-    <motion.aside
-      initial={false}
-      animate={{ width: isSidebarOpen ? 260 : 80 }}
-      className="glass-card m-4 flex flex-col justify-between py-6 rounded-2xl border-white/5 relative z-40 lg:flex-shrink-0"
+    <aside
+      style={{ width: isSidebarOpen ? 260 : 80 }}
+      className="glass-card m-4 flex flex-col justify-between py-6 rounded-2xl border-white/5 relative z-40 lg:flex-shrink-0 transition-[width] duration-300 ease-in-out overflow-hidden"
     >
       <div>
         <div className="flex items-center px-6 mb-10 h-10">
@@ -37,9 +35,9 @@ export default function Sidebar() {
             <Activity className="text-accent relative z-10" size={28} />
           </div>
           {isSidebarOpen && (
-            <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="ml-4 font-heading font-bold text-lg leading-tight">
+            <h1 className="ml-4 font-heading font-bold text-lg leading-tight transition-opacity duration-200">
               HospitalRisk<br/><span className="text-accent text-sm font-normal">Platform</span>
-            </motion.h1>
+            </h1>
           )}
         </div>
 
@@ -72,6 +70,6 @@ export default function Sidebar() {
           )}
         </div>
       </div>
-    </motion.aside>
+    </aside>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+// framer-motion removed — causes removeChild crash with React 19 on conditional renders
 import { Check, ChevronRight, ChevronLeft, ArrowRight, ShieldAlert } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
@@ -123,7 +123,7 @@ export default function Intake() {
         <h1 className="text-3xl font-heading font-bold mb-8 text-glow">New Patient Assessment</h1>
 
         {!result ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div>
               <div className="flex items-center justify-between mb-12 max-w-2xl mx-auto relative px-4">
                 {Steps.map((name, i) => (
                   <div key={name} className="flex flex-col items-center relative z-10">
@@ -139,7 +139,7 @@ export default function Intake() {
 
               <div className="glass-card p-10 max-w-3xl mx-auto min-h-[500px] border-t-4 border-t-accent shadow-2xl">
                 {step === 0 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                  <div>
                     <h2 className="text-xl font-heading text-text mb-8 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">1</div>
                       Demographics & Admission
@@ -168,11 +168,11 @@ export default function Intake() {
                         <input type="number" name="admission_type_id" value={formData.admission_type_id} onChange={handleChange} className="w-full bg-base border border-white/10 rounded-xl px-5 py-3.5 text-text focus:border-accent outline-none transition-all" />
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {step === 1 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                  <div>
                     <h2 className="text-xl font-heading text-text mb-8 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">2</div>
                       Clinical History
@@ -189,11 +189,11 @@ export default function Intake() {
                       <div><label className="block text-xs font-bold text-text-muted mb-3 uppercase tracking-wider">Medications Count</label><input type="number" name="num_medications" value={formData.num_medications} onChange={handleChange} className="w-full bg-base border border-white/10 rounded-xl px-5 py-3.5 outline-none focus:border-accent transition-all" /></div>
                       <div><label className="block text-xs font-bold text-text-muted mb-3 uppercase tracking-wider">Total Diagnoses</label><input type="number" name="number_diagnoses" value={formData.number_diagnoses} onChange={handleChange} className="w-full bg-base border border-white/10 rounded-xl px-5 py-3.5 outline-none focus:border-accent transition-all" /></div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {step === 2 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                  <div>
                     <h2 className="text-xl font-heading text-text mb-8 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">3</div>
                       Diabetes Management
@@ -212,7 +212,7 @@ export default function Intake() {
                         </select>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 <div className="mt-12 flex justify-between pt-8 border-t border-white/5">
@@ -238,9 +238,9 @@ export default function Intake() {
                   )}
                 </div>
               </div>
-            </motion.div>
+            </div>
           ) : (
-            <motion.div key="results" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="glass-card p-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                   <ShieldAlert size={120} className="text-accent" />
@@ -269,7 +269,7 @@ export default function Intake() {
                   </GlowButton>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
       </div>
     </PageTransition>

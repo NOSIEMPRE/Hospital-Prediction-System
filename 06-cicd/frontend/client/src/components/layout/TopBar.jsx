@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Bell, Search, User, LogOut, Settings, Award, BookOpen, GraduationCap } from 'lucide-react';
-import { motion } from 'framer-motion';
 import useAppStore from '../../store/appStore';
 
 const NOTIFICATIONS = [
@@ -62,11 +61,7 @@ export default function TopBar() {
           </button>
 
           {showNotifs && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                className="absolute right-0 mt-3 w-80 glass-card p-4 shadow-2xl border border-white/10 z-[100]"
-              >
+              <div className="absolute right-0 mt-3 w-80 glass-card p-4 shadow-2xl border border-white/10 z-[100]">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-heading font-bold text-sm">Clinical Alerts</h3>
                   <span className="text-[10px] text-accent uppercase tracking-wider font-bold">3 New</span>
@@ -87,7 +82,7 @@ export default function TopBar() {
                 <button className="w-full mt-4 py-2 text-[10px] text-text-muted hover:text-accent font-bold uppercase tracking-widest border-t border-white/5 transition-colors">
                   View All Activity
                 </button>
-              </motion.div>
+              </div>
             )}
         </div>
 
@@ -101,11 +96,7 @@ export default function TopBar() {
           </button>
 
           {showProfile && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                className="absolute right-0 mt-3 w-72 glass-card overflow-hidden shadow-2xl border border-white/10 z-[100]"
-              >
+              <div className="absolute right-0 mt-3 w-72 glass-card overflow-hidden shadow-2xl border border-white/10 z-[100]">
                 <div className="bg-accent/10 p-6 text-center border-b border-white/5">
                   <div className="w-16 h-16 bg-accent/20 rounded-full mx-auto mb-3 border border-accent/30 flex items-center justify-center">
                     <User size={32} className="text-accent" />
@@ -140,7 +131,7 @@ export default function TopBar() {
                     </button>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
         </div>
       </div>
