@@ -16,5 +16,6 @@ RUN if [ -f models/model.zip ]; then \
       unzip -o models/model.zip -d models/ && rm models/model.zip; \
     fi && echo "Model ready in /app/models"
 
-EXPOSE 9696
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9696"]
+# Render (and other PaaS) inject PORT at runtime — must listen on it or you get 502.
+EXPOSE 10000
+CMD ["sh", "-c", "exec uvicorn app:app --host 0.0.0.0 --port ${PORT:-9696}"]
