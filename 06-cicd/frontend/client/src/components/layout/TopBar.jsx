@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Bell, Search, User, LogOut, Settings, Award, BookOpen, GraduationCap } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import useAppStore from '../../store/appStore';
 
 const NOTIFICATIONS = [
@@ -61,12 +61,10 @@ export default function TopBar() {
             <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-accent rounded-full border-2 border-base animate-pulse"></span>
           </button>
 
-          <AnimatePresence>
-            {showNotifs && (
-              <motion.div 
+          {showNotifs && (
+              <motion.div
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute right-0 mt-3 w-80 glass-card p-4 shadow-2xl border border-white/10 z-[100]"
               >
                 <div className="flex justify-between items-center mb-4">
@@ -91,9 +89,8 @@ export default function TopBar() {
                 </button>
               </motion.div>
             )}
-          </AnimatePresence>
         </div>
-        
+
         {/* Profile Avatar & Bio */}
         <div className="relative" ref={profileRef}>
           <button 
@@ -103,12 +100,10 @@ export default function TopBar() {
             {currentUser.initials}
           </button>
 
-          <AnimatePresence>
-            {showProfile && (
-              <motion.div 
+          {showProfile && (
+              <motion.div
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute right-0 mt-3 w-72 glass-card overflow-hidden shadow-2xl border border-white/10 z-[100]"
               >
                 <div className="bg-accent/10 p-6 text-center border-b border-white/5">
@@ -147,7 +142,6 @@ export default function TopBar() {
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
         </div>
       </div>
     </header>

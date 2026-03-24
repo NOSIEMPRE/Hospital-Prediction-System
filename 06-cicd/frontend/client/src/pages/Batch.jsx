@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { UploadCloud, FileSpreadsheet, Download, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageTransition from '../components/layout/PageTransition';
@@ -112,9 +112,8 @@ export default function Batch() {
           </p>
         </div>
 
-        <AnimatePresence>
-          {file && results.length === 0 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="mt-8 glass-card p-6 flex justify-between items-center bg-accent/5 border border-accent/20">
+        {file && results.length === 0 && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 glass-card p-6 flex justify-between items-center bg-accent/5 border border-accent/20">
               <div className="flex items-center gap-5">
                 <div className="p-3 bg-accent/10 rounded-xl text-accent">
                   <FileSpreadsheet size={28} />
@@ -184,7 +183,6 @@ export default function Batch() {
                </div>
             </motion.div>
           )}
-        </AnimatePresence>
       </div>
     </PageTransition>
   );
