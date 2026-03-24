@@ -4,6 +4,7 @@ import { Check, ChevronRight, ChevronLeft, ArrowRight, ShieldAlert } from 'lucid
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
 import PageTransition from '../components/layout/PageTransition';
+import RechartsClientOnly from '../components/RechartsClientOnly';
 import GlowButton from '../components/ui/GlowButton';
 import RiskBadge from '../components/ui/RiskBadge';
 import api from '../api/client';
@@ -101,8 +102,9 @@ export default function Intake() {
 
     return (
       <div className="h-[350px] w-full mt-8">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={entries} layout="vertical" margin={{ left: 100, right: 30, top: 10, bottom: 10 }}>
+        <RechartsClientOnly minHeight={350}>
+          <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={entries} layout="vertical" margin={{ left: 100, right: 30, top: 10, bottom: 10 }} isAnimationActive={false}>
             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="rgba(255,255,255,0.05)" />
             <XAxis type="number" stroke="#6b90b8" fontSize={10} axisLine={false} tickLine={false} />
             <YAxis dataKey="name" type="category" stroke="#f0f6ff" fontSize={11} width={90} axisLine={false} tickLine={false} />
@@ -118,6 +120,7 @@ export default function Intake() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        </RechartsClientOnly>
       </div>
     );
   };

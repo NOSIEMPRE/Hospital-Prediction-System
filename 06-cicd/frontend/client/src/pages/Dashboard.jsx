@@ -6,6 +6,7 @@ import RiskBadge from '../components/ui/RiskBadge';
 import api from '../api/client';
 import useAppStore from '../store/appStore';
 import PageTransition from '../components/layout/PageTransition';
+import RechartsClientOnly from '../components/RechartsClientOnly';
 
 const sparkData = [
   { time: '12:00', val: 40 },
@@ -72,8 +73,9 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="h-[300px] w-full">
+            <RechartsClientOnly minHeight={300}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={sparkData}>
+              <AreaChart data={sparkData} isAnimationActive={false}>
                 <defs>
                   <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#00e5c0" stopOpacity={0.3}/>
@@ -90,6 +92,7 @@ export default function Dashboard() {
                 <Area type="monotone" dataKey="val" stroke="#00e5c0" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
               </AreaChart>
             </ResponsiveContainer>
+            </RechartsClientOnly>
           </div>
         </div>
 

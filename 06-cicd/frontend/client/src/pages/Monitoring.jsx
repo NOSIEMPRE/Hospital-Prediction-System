@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid } from 'recharts';
 import { Server, Activity, Database, Shield } from 'lucide-react';
 import PageTransition from '../components/layout/PageTransition';
+import RechartsClientOnly from '../components/RechartsClientOnly';
 import useAppStore from '../store/appStore';
 
 // Simulated histogram data for Recharts
@@ -91,8 +92,9 @@ export default function Monitoring() {
               <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 px-2 py-1 rounded border border-blue-500/20">TRACING ENABLED</span>
             </div>
             <div className="h-72 w-full">
+              <RechartsClientOnly minHeight={288}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={logs}>
+                <AreaChart data={logs} isAnimationActive={false}>
                   <defs>
                     <linearGradient id="colorLatency" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3d8ef8" stopOpacity={0.2}/>
@@ -106,6 +108,7 @@ export default function Monitoring() {
                   <Area type="monotone" dataKey="latency" stroke="#3d8ef8" strokeWidth={3} fillOpacity={1} fill="url(#colorLatency)" />
                 </AreaChart>
               </ResponsiveContainer>
+              </RechartsClientOnly>
             </div>
           </div>
 
@@ -115,8 +118,9 @@ export default function Monitoring() {
                Risk Score Frequency
              </h2>
              <div className="h-72 w-full">
+                <RechartsClientOnly minHeight={288}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={distData}>
+                  <BarChart data={distData} isAnimationActive={false}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="range" stroke="#6b90b8" fontSize={9} axisLine={false} tickLine={false} />
                     <YAxis stroke="#6b90b8" fontSize={10} axisLine={false} tickLine={false} />
@@ -124,6 +128,7 @@ export default function Monitoring() {
                     <Bar dataKey="pts" fill="#00e5c0" radius={[4, 4, 0, 0]} barSize={20} />
                   </BarChart>
                 </ResponsiveContainer>
+                </RechartsClientOnly>
              </div>
           </div>
         </div>
