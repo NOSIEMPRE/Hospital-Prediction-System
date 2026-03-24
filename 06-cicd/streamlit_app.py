@@ -4,6 +4,7 @@ Run: streamlit run streamlit_app.py
 Requires the API server running (python app.py or Docker on port 9696).
 """
 import io
+import os
 import time
 from pathlib import Path
 
@@ -204,7 +205,7 @@ label {
 </style>
 """, unsafe_allow_html=True)
 
-DEFAULT_API = "http://localhost:9696" 
+DEFAULT_API = os.environ.get("ML_API_URL", "https://hospital-prediction-system.onrender.com")
 CLOUD_API = "https://hospital-readmission-risk-predictor-pcv7.onrender.com"
 PREDICTION_LOG = Path(__file__).resolve().parent / "data" / "predictions.log"
 
