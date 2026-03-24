@@ -52,7 +52,6 @@
     };
 
     const Database = (props) => <LucideIcon name="database" {...props} />;
-    const Settings2 = (props) => <LucideIcon name="settings-2" {...props} />;
     const BrainCircuit = (props) => <LucideIcon name="brain-circuit" {...props} />;
     const GitBranch = (props) => <LucideIcon name="git-branch" {...props} />;
     const Server = (props) => <LucideIcon name="server" {...props} />;
@@ -74,6 +73,8 @@
     const Loader2 = (props) => <LucideIcon name="loader-2" {...props} />;
     const ChevronDown = (props) => <LucideIcon name="chevron-down" {...props} />;
     const Play = (props) => <LucideIcon name="play" {...props} />;
+    const FileSearch = (props) => <LucideIcon name="file-search" {...props} />;
+    const Users = (props) => <LucideIcon name="users" {...props} />;
 
     const FlowNode = ({ id, title, icon: Icon, children, colorClass, expandedNodes, toggleNode, activeStep }) => {
       const isExpanded = expandedNodes.includes(id);
@@ -154,7 +155,7 @@
       const flowRef = useRef(null);
       const [isDownloading, setIsDownloading] = useState(false);
 
-      const allNodes = ['data', 'feature', 'training', 'quality', 'cicd', 'production', 'ui'];
+      const allNodes = ['data', 'feature', 'training', 'quality', 'cicd', 'production', 'evidently', 'ui'];
       const [expandedNodes, setExpandedNodes] = useState(allNodes);
       const [activeStep, setActiveStep] = useState(null);
       const [isRunning, setIsRunning] = useState(false);
@@ -238,7 +239,7 @@
 
           <div className="text-center mb-8 mt-4" data-html2canvas-ignore="true">
             <h1 className="text-2xl font-bold text-slate-100 mb-2">Hospital Readmission Risk — ML Pipeline</h1>
-            <p className="text-slate-500 text-sm">Click any block to expand / collapse. Press Simulate to walk through the pipeline.</p>
+            <p className="text-slate-500 text-sm max-w-xl mx-auto">Click any block to expand / collapse. Simulate walks the flow. Matches the technical walkthrough: data → train → gate → CI/CD → FastAPI → Evidently → UIs. Demo locally for stable video; free cloud URLs omitted.</p>
           </div>
 
           <FlowNode id="data" title="DATA LAYER" icon={Database} colorClass="border-blue-500/50 text-blue-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
@@ -248,23 +249,25 @@
                 <span className="text-blue-300">Target: 30-day readmission <span className="text-slate-600 px-1">|</span> 11.2% positive rate</span>
               </div>
             </InnerBlock>
+            <InnerBlock title="read_data() · train.py" icon={FileCode2} className="border-l-2 border-l-blue-500/40 opacity-90">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-slate-400 text-xs">
+                <span>drop sparse weight column</span>
+                <span>fill missing values</span>
+                <span>encode target binary</span>
+                <span>care_intensity, medication_changed</span>
+              </div>
+            </InnerBlock>
           </FlowNode>
 
-          <FlowEdge isProcess={true} activeStep={activeStep === 'data' || activeStep === 'feature'}>
-            <div className="text-blue-300 font-bold mb-1 border-b border-slate-600 pb-1">read_data() in train.py</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-2 text-slate-400 text-xs">
-              <span>- drop sparse weight column</span>
-              <span>- fill missing values</span>
-              <span>- encode target as binary (0/1)</span>
-              <span>- derive care_intensity, medication_changed</span>
-            </div>
+          <FlowEdge isProcess={false} activeStep={activeStep === 'data' || activeStep === 'feature'}>
+            prepare_features()
           </FlowEdge>
 
-          <FlowNode id="feature" title="FEATURE ENGINEERING" icon={Settings2} colorClass="border-emerald-500/50 text-emerald-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+          <FlowNode id="feature" title="FEATURE ENGINEERING & SPLIT" icon={Users} colorClass="border-emerald-500/50 text-emerald-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
             <InnerBlock title="prepare_features()" icon={Workflow} className="border-l-2 border-l-emerald-500">
               <div className="mb-1"><span className="text-emerald-300">Output:</span> 20-feature dict per encounter</div>
-              <div className="mb-1"><span className="text-emerald-300">Split:</span> Patient-level stratified (80% train / 20% val)</div>
-              <div className="text-emerald-200/70 border-t border-emerald-900/50 pt-2 mt-1">Split by patient_nbr to prevent data leakage</div>
+              <div className="mb-1"><span className="text-emerald-300">Split:</span> By patient ID (patient_nbr), stratified 80/20 train vs val</div>
+              <div className="text-emerald-200/70 border-t border-emerald-900/50 pt-2 mt-1">Same patient cannot appear in both sets (avoids leakage from repeat admissions)</div>
             </InnerBlock>
           </FlowNode>
 
@@ -272,16 +275,17 @@
             <FileCode2 className="w-4 h-4" /> train_and_log() in train.py
           </FlowEdge>
 
-          <FlowNode id="training" title="MODEL TRAINING" icon={BrainCircuit} colorClass="border-purple-500/50 text-purple-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+          <FlowNode id="training" title="MODEL TRAINING & MLFLOW" icon={BrainCircuit} colorClass="border-purple-500/50 text-purple-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <InnerBlock title="scikit-learn Pipeline" icon={Workflow} className="border-l-2 border-l-purple-500 hover:border-l-4">
-                DictVectorizerWrapper → sparse matrix<br />
-                XGBClassifier (scale_pos_weight ~8.1)
+              <InnerBlock title="scikit-learn + XGBoost" icon={Workflow} className="border-l-2 border-l-purple-500 hover:border-l-4">
+                DictVectorizer → sparse matrix → XGBoost classifier<br />
+                <span className="text-purple-200/90">Chosen: stronger validation metrics vs other models we tried</span><br />
+                Imbalance: scale_pos_weight from label counts
               </InnerBlock>
 
-              <InnerBlock title="MLflow (mlflow.db)" icon={Activity} className="border-l-2 border-l-purple-500 hover:border-l-4">
-                <span className="text-purple-300">Logged to MLflow:</span><br />
-                PR-AUC, ROC-AUC, all hyperparameters
+              <InnerBlock title="MLflow" icon={Activity} className="border-l-2 border-l-purple-500 hover:border-l-4">
+                <span className="text-purple-300">Logged per run:</span><br />
+                PR-AUC, hyperparameters, model artifact (compare runs)
               </InnerBlock>
             </div>
 
@@ -323,7 +327,7 @@
 
               <InnerBlock title="ci-cd.yml" icon={Terminal} className="border-l-2 border-l-amber-500 hover:border-l-4">
                 <div className="mb-2 text-amber-100/70 text-xs flex flex-wrap gap-2 items-center">
-                  <span>download artifact</span> → <span>lint</span> → <span>unit tests</span> → <span>Docker build</span> → <span>integration tests <span className="text-amber-400">(live container)</span></span> → <span>push to GHCR</span>
+                  <span>download artifact</span> → <span>lint</span> → <span>unit tests</span> → <span>Docker build</span> → <span>integration tests <span className="text-amber-400">(FastAPI in container: GET /health, POST /predict)</span></span> → <span>push to GHCR</span>
                 </div>
                 <div className="bg-slate-900/80 p-2 rounded text-xs text-slate-400 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                   <span className="text-slate-300">ghcr.io/org/repo:latest</span> <span className="text-slate-500">(Render auto-deploy)</span>
@@ -337,53 +341,65 @@
             Render polls GHCR for :latest
           </FlowEdge>
 
-          <FlowNode id="production" title="PRODUCTION (Render.com)" icon={Server} colorClass="border-rose-500/50 text-rose-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+          <FlowNode id="production" title="PRODUCTION (FastAPI + Render)" icon={Server} colorClass="border-rose-500/50 text-rose-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
             <div className="space-y-3">
-              <InnerBlock title="Docker Container via Uvicorn" icon={Container} className="border-l-2 border-l-rose-500 hover:border-l-4">
-                <div className="text-rose-200 mb-2 border-b border-rose-900/30 pb-2">app.py via uvicorn</div>
+              <InnerBlock title="Docker: FastAPI + Uvicorn" icon={Container} className="border-l-2 border-l-rose-500 hover:border-l-4">
+                <div className="text-rose-200 mb-2 border-b border-rose-900/30 pb-2">app.py</div>
                 <div className="space-y-2 text-xs md:text-sm text-slate-300">
                   <div className="flex flex-wrap gap-2">
                     <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-rose-300">GET /health</span>
                     <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-rose-300">POST /predict</span>
                     <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-rose-300">POST /predict/batch</span>
+                    <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-rose-200/80">OpenAPI /docs</span>
                   </div>
                   <div className="pt-1 text-slate-400">
-                    SHAP per prediction <span className="text-slate-600 px-1">|</span> prediction logging <span className="text-slate-600 px-1">|</span> CORS
+                    SHAP-style explanations <span className="text-slate-600 px-1">|</span> CSV prediction log <span className="text-slate-600 px-1">|</span> CORS
                   </div>
                 </div>
               </InnerBlock>
 
-              <InnerBlock title="Public Endpoint" icon={Globe} className="border-l-2 border-l-rose-500 hover:border-l-4">
-                <a href="https://hospital-prediction-system.onrender.com/docs" target="_blank" className="text-rose-300 text-xs md:text-sm break-all font-bold tracking-wide hover:text-rose-200 underline">
-                  https://hospital-prediction-system.onrender.com
+              <InnerBlock title="Deploy" icon={Globe} className="border-l-2 border-l-rose-500 hover:border-l-4">
+                <a href="https://render.com" target="_blank" rel="noopener noreferrer" className="text-rose-300 text-xs md:text-sm break-all font-bold tracking-wide hover:text-rose-200 underline">
+                  Render
                 </a>
+                <span className="text-slate-500 text-xs ml-2">pulls GHCR image, checks health. Free tier may sleep; do not rely on public URL for demo.</span>
               </InnerBlock>
             </div>
           </FlowNode>
 
-          <FlowEdge activeStep={activeStep === 'production' || activeStep === 'ui'}>
-            HTTP POST /predict
+          <FlowEdge activeStep={activeStep === 'production' || activeStep === 'evidently'}>
+            scoring data → drift check
+          </FlowEdge>
+
+          <FlowNode id="evidently" title="MONITORING (Evidently)" icon={FileSearch} colorClass="border-violet-500/50 text-violet-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <InnerBlock title="05-monitoring/ batch workflow" icon={FileSearch} className="border-l-2 border-l-violet-500">
+              <div className="space-y-2 text-xs md:text-sm">
+                <div><span className="text-violet-300">simulate.py</span> replays traffic to /predict → writes predictions.csv</div>
+                <div><span className="text-violet-300">monitor.py</span> + Evidently → static <span className="text-violet-200">monitoring_report.html</span></div>
+                <div className="text-slate-400 border-t border-violet-900/40 pt-2">Drift on inputs, label shift, performance slices. Offline report, not a live dashboard.</div>
+              </div>
+            </InnerBlock>
+          </FlowNode>
+
+          <FlowEdge activeStep={activeStep === 'evidently' || activeStep === 'ui'}>
+            HTTP POST /predict · clinicians
           </FlowEdge>
 
           <FlowNode id="ui" title="USER INTERFACES" icon={MonitorPlay} colorClass="border-cyan-500/50 text-cyan-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InnerBlock title="Streamlit" icon={LayoutDashboard} className="border-l-2 border-l-cyan-500 hover:border-l-4 flex flex-col h-full">
-                <div className="text-slate-400 text-xs mb-1 font-mono">(Python requests → FastAPI)</div>
-                <a href="https://hospital-prediction-system.streamlit.app" target="_blank" className="text-cyan-400 text-xs mb-3 break-all font-bold hover:text-cyan-300 underline">
-                  hospital-prediction-system.streamlit.app
-                </a>
+                <div className="text-slate-400 text-xs mb-1 font-mono">(Python → FastAPI)</div>
+                <div className="text-cyan-300 text-xs mb-3 font-bold">streamlit_app.py</div>
                 <div className="text-xs md:text-sm text-slate-300 mt-auto pt-2 border-t border-cyan-900/30">
-                  Patient intake <span className="text-slate-600 px-1">|</span> batch scoring <span className="text-slate-600 px-1">|</span> monitoring
+                  Quick clinical form + API switch (local / cloud)
                 </div>
               </InnerBlock>
 
-              <InnerBlock title="React + Node.js" icon={AppWindow} className="border-l-2 border-l-cyan-500 hover:border-l-4 flex flex-col h-full">
-                <div className="text-slate-400 text-xs mb-1 font-mono">(browser → Node.js proxy → FastAPI)</div>
-                <a href="https://hospital-prediction-system-1.onrender.com" target="_blank" className="text-cyan-400 text-xs mb-3 break-all font-bold hover:text-cyan-300 underline">
-                  hospital-prediction-system-1.onrender.com
-                </a>
+              <InnerBlock title="React + Node proxy" icon={AppWindow} className="border-l-2 border-l-cyan-500 hover:border-l-4 flex flex-col h-full">
+                <div className="text-slate-400 text-xs mb-1 font-mono">browser → localhost:3001 → FastAPI</div>
+                <div className="text-cyan-300 text-xs mb-3 font-mono break-all font-bold">http://localhost:5173</div>
                 <div className="text-xs md:text-sm text-slate-300 mt-auto pt-2 border-t border-cyan-900/30">
-                  Login, Dashboard, Intake, Batch, Monitoring
+                  Dashboard, Pipeline page, Intake, Batch, Monitoring
                 </div>
               </InnerBlock>
             </div>
