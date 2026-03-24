@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>机器学习流水线架构图</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    body { background-color: #020617; }
+  </style>
+
+</head>
+<body class="text-slate-200 antialiased selection:bg-blue-500/30">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const LucideIcon = ({ name, className }) => {
+      const ref = useRef();
+      useEffect(() => {
+        if (ref.current && window.lucide) {
+          ref.current.innerHTML = `<i data-lucide="${name}"></i>`;
+          window.lucide.createIcons({
+            root: ref.current,
+            attrs: { class: className }
+          });
+        }
+      }, [name, className]);
+      return <span ref={ref} className="inline-flex items-center justify-center"></span>;
+    };
+
+    const Database = (props) => <LucideIcon name="database" {...props} />;
+    const Settings2 = (props) => <LucideIcon name="settings-2" {...props} />;
+    const BrainCircuit = (props) => <LucideIcon name="brain-circuit" {...props} />;
+    const GitBranch = (props) => <LucideIcon name="git-branch" {...props} />;
+    const Server = (props) => <LucideIcon name="server" {...props} />;
+    const MonitorPlay = (props) => <LucideIcon name="monitor-play" {...props} />;
+    const ArrowDown = (props) => <LucideIcon name="arrow-down" {...props} />;
+    const Box = (props) => <LucideIcon name="box" {...props} />;
+    const FileCode2 = (props) => <LucideIcon name="file-code-2" {...props} />;
+    const Activity = (props) => <LucideIcon name="activity" {...props} />;
+    const FileText = (props) => <LucideIcon name="file-text" {...props} />;
+    const Workflow = (props) => <LucideIcon name="workflow" {...props} />;
+    const Terminal = (props) => <LucideIcon name="terminal" {...props} />;
+    const Container = (props) => <LucideIcon name="container" {...props} />;
+    const Globe = (props) => <LucideIcon name="globe" {...props} />;
+    const LayoutDashboard = (props) => <LucideIcon name="layout-dashboard" {...props} />;
+    const AppWindow = (props) => <LucideIcon name="app-window" {...props} />;
+    const PlaySquare = (props) => <LucideIcon name="play-square" {...props} />;
+    const ShieldCheck = (props) => <LucideIcon name="shield-check" {...props} />;
+    const Download = (props) => <LucideIcon name="download" {...props} />;
+    const Loader2 = (props) => <LucideIcon name="loader-2" {...props} />;
+    const ChevronDown = (props) => <LucideIcon name="chevron-down" {...props} />;
+    const Play = (props) => <LucideIcon name="play" {...props} />;
+
+    const FlowNode = ({ id, title, icon: Icon, children, colorClass, expandedNodes, toggleNode, activeStep }) => {
+      const isExpanded = expandedNodes.includes(id);
+      const isActive = activeStep === id;
+
+      return (
+        <div
+          className={`w-full max-w-3xl border rounded-xl shadow-lg backdrop-blur-sm overflow-hidden transition-all duration-500
+            ${isActive ? `ring-2 ring-offset-4 ring-offset-slate-950 scale-[1.02] shadow-[0_0_30px_-5px] z-10 ${colorClass.replace('border-', 'ring-').replace('text-', 'shadow-')}` : 'scale-100'}
+            ${isActive ? 'bg-slate-800/80' : 'bg-slate-900/50'}
+            ${colorClass}
+          `}
+        >
+          <div
+            onClick={() => toggleNode(id)}
+            className={`px-4 py-3 border-b flex items-center justify-between cursor-pointer transition-colors hover:bg-slate-700/50
+              ${colorClass.replace('border-', 'border-b-')}
+              ${isActive ? 'bg-slate-700/80' : 'bg-slate-800/50'}
+            `}
+          >
+            <div className="flex items-center gap-3">
+              <Icon className={`w-5 h-5 ${isActive ? 'animate-pulse' : ''}`} />
+              <h3 className="font-bold tracking-wide text-sm">{title}</h3>
+            </div>
+            <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`} />
+          </div>
+
+          <div className={`transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="p-5 text-sm text-slate-300 space-y-4 font-mono leading-relaxed">
+              {children}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const FlowEdge = ({ children, isProcess = false, activeStep }) => (
+      <div className="flex flex-col items-center justify-center py-2 w-full max-w-3xl group">
+        <div className={`w-0.5 h-6 transition-colors duration-300 ${activeStep ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`}></div>
+        {children && (
+          <div className={`relative z-10 my-1 transition-all duration-300 ${isProcess ? 'w-full' : ''}`}>
+            {isProcess ? (
+              <div className={`mx-auto w-3/4 max-w-md border rounded-lg p-3 text-sm font-mono shadow-xl transition-colors duration-300
+                ${activeStep ? 'border-blue-400 bg-blue-900/40 text-blue-100' : 'border-slate-600 bg-slate-800/80 text-slate-300'}
+              `}>
+                {children}
+              </div>
+            ) : (
+              <div className={`border px-4 py-1.5 rounded-full text-xs font-semibold shadow-md flex items-center gap-2 transition-colors duration-300
+                ${activeStep ? 'border-blue-400 bg-blue-900/60 text-blue-200' : 'border-slate-600 bg-slate-800 text-slate-300'}
+              `}>
+                {children}
+              </div>
+            )}
+          </div>
+        )}
+        <div className={`w-0.5 h-6 relative transition-colors duration-300 ${activeStep ? 'bg-blue-400' : 'bg-slate-600'}`}>
+          <ArrowDown className={`absolute -bottom-4 -left-2.5 w-5 h-5 transition-colors duration-300 ${activeStep ? 'text-blue-400 animate-bounce' : 'text-slate-600'}`} />
+        </div>
+      </div>
+    );
+
+    const InnerBlock = ({ title, icon: Icon, children, className = "" }) => (
+      <div className={`bg-slate-950/40 border border-slate-700/50 rounded-lg p-3 transition-all duration-300 hover:bg-slate-800/60 hover:shadow-lg hover:-translate-y-0.5 ${className}`}>
+        {title && (
+          <div className="flex items-center gap-2 mb-2 text-slate-200 font-semibold text-sm border-b border-slate-700/50 pb-2">
+            {Icon && <Icon className="w-4 h-4 text-slate-400" />}
+            {title}
+          </div>
+        )}
+        <div className="text-slate-400 text-sm font-mono leading-relaxed">
+          {children}
+        </div>
+      </div>
+    );
+
+    function App() {
+      const flowRef = useRef(null);
+      const [isDownloading, setIsDownloading] = useState(false);
+
+      const allNodes = ['data', 'feature', 'training', 'quality', 'cicd', 'production', 'ui'];
+      const [expandedNodes, setExpandedNodes] = useState(allNodes);
+      const [activeStep, setActiveStep] = useState(null);
+      const [isRunning, setIsRunning] = useState(false);
+
+      const toggleNode = (id) => {
+        setExpandedNodes(prev => prev.includes(id) ? prev.filter(nodeId => nodeId !== id) : [...prev, id]);
+      };
+
+      const runPipeline = () => {
+        if (isRunning) return;
+        setIsRunning(true);
+        setExpandedNodes(allNodes);
+
+        let currentStepIndex = 0;
+        const interval = setInterval(() => {
+          if (currentStepIndex < allNodes.length) {
+            setActiveStep(allNodes[currentStepIndex]);
+            currentStepIndex++;
+          } else {
+            clearInterval(interval);
+            setTimeout(() => {
+              setActiveStep(null);
+              setIsRunning(false);
+            }, 1500);
+          }
+        }, 1200);
+      };
+
+      const downloadImage = async () => {
+        try {
+          setIsDownloading(true);
+          setExpandedNodes(allNodes);
+          setActiveStep(null);
+
+          setTimeout(async () => {
+            const element = flowRef.current;
+            const canvas = await window.html2canvas(element, {
+              backgroundColor: '#020617',
+              scale: 2,
+              useCORS: true,
+              logging: false
+            });
+
+            const link = document.createElement('a');
+            link.download = 'ML_Pipeline_Diagram.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            setIsDownloading(false);
+          }, 600);
+
+        } catch (error) {
+          console.error("Export failed", error);
+          setIsDownloading(false);
+        }
+      };
+
+      return (
+        <div ref={flowRef} className="min-h-screen py-20 px-4 flex flex-col items-center relative overflow-hidden">
+
+          <div data-html2canvas-ignore="true" className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
+            <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700 p-2 rounded-2xl shadow-2xl flex items-center gap-3 pointer-events-auto">
+              <button onClick={runPipeline} disabled={isRunning}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all ${
+                  isRunning ? 'bg-slate-800 text-slate-400 cursor-not-allowed' : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-600/50 hover:shadow-[0_0_15px_rgba(5,150,105,0.5)]'
+                }`}
+              >
+                <Play className={`w-4 h-4 ${isRunning ? 'animate-pulse' : ''}`} />
+                {isRunning ? 'Running...' : 'Simulate Pipeline'}
+              </button>
+
+              <div className="w-px h-6 bg-slate-700"></div>
+
+              <button onClick={downloadImage} disabled={isDownloading}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-600/50 transition-all hover:shadow-[0_0_15px_rgba(37,99,235,0.5)] disabled:opacity-50"
+              >
+                {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {isDownloading ? 'Exporting...' : 'Export PNG'}
+              </button>
+            </div>
+          </div>
+
+          <div className="text-center mb-8 mt-4" data-html2canvas-ignore="true">
+            <h1 className="text-2xl font-bold text-slate-100 mb-2">Hospital Readmission Risk — ML Pipeline</h1>
+            <p className="text-slate-500 text-sm">Click any block to expand / collapse. Press Simulate to walk through the pipeline.</p>
+          </div>
+
+          <FlowNode id="data" title="DATA LAYER" icon={Database} colorClass="border-blue-500/50 text-blue-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <InnerBlock title="data/diabetic_data.csv (UCI Diabetes 130-US Hospitals)" icon={FileText} className="border-l-2 border-l-blue-500">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center text-xs md:text-sm gap-2">
+                <span>101,766 encounters <span className="text-slate-600 px-1">|</span> 71,518 unique patients</span>
+                <span className="text-blue-300">Target: 30-day readmission <span className="text-slate-600 px-1">|</span> 11.2% positive rate</span>
+              </div>
+            </InnerBlock>
+          </FlowNode>
+
+          <FlowEdge isProcess={true} activeStep={activeStep === 'data' || activeStep === 'feature'}>
+            <div className="text-blue-300 font-bold mb-1 border-b border-slate-600 pb-1">read_data() in train.py</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-2 text-slate-400 text-xs">
+              <span>- drop sparse weight column</span>
+              <span>- fill missing values</span>
+              <span>- encode target as binary (0/1)</span>
+              <span>- derive care_intensity, medication_changed</span>
+            </div>
+          </FlowEdge>
+
+          <FlowNode id="feature" title="FEATURE ENGINEERING" icon={Settings2} colorClass="border-emerald-500/50 text-emerald-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <InnerBlock title="prepare_features()" icon={Workflow} className="border-l-2 border-l-emerald-500">
+              <div className="mb-1"><span className="text-emerald-300">Output:</span> 20-feature dict per encounter</div>
+              <div className="mb-1"><span className="text-emerald-300">Split:</span> Patient-level stratified (80% train / 20% val)</div>
+              <div className="text-emerald-200/70 border-t border-emerald-900/50 pt-2 mt-1">Split by patient_nbr to prevent data leakage</div>
+            </InnerBlock>
+          </FlowNode>
+
+          <FlowEdge isProcess={false} activeStep={activeStep === 'feature' || activeStep === 'training'}>
+            <FileCode2 className="w-4 h-4" /> train_and_log() in train.py
+          </FlowEdge>
+
+          <FlowNode id="training" title="MODEL TRAINING" icon={BrainCircuit} colorClass="border-purple-500/50 text-purple-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <InnerBlock title="scikit-learn Pipeline" icon={Workflow} className="border-l-2 border-l-purple-500 hover:border-l-4">
+                DictVectorizerWrapper → sparse matrix<br />
+                XGBClassifier (scale_pos_weight ~8.1)
+              </InnerBlock>
+
+              <InnerBlock title="MLflow (mlflow.db)" icon={Activity} className="border-l-2 border-l-purple-500 hover:border-l-4">
+                <span className="text-purple-300">Logged to MLflow:</span><br />
+                PR-AUC, ROC-AUC, all hyperparameters
+              </InnerBlock>
+            </div>
+
+            <InnerBlock title="Artifacts Saved" icon={Box} className="border-l-2 border-l-purple-500 hover:border-l-4">
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs md:text-sm">
+                <span className="text-slate-300">06-cicd/models/model/</span>
+                <span className="text-slate-600 hidden sm:inline">|</span>
+                <span className="text-slate-300">06-cicd/run_id.txt</span>
+              </div>
+            </InnerBlock>
+          </FlowNode>
+
+          <FlowEdge isProcess={false} activeStep={activeStep === 'training' || activeStep === 'quality'}>
+            quality gate check
+          </FlowEdge>
+
+          <FlowNode id="quality" title="QUALITY GATE" icon={ShieldCheck} colorClass="border-yellow-500/50 text-yellow-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <div className="grid grid-cols-1 gap-3">
+              <InnerBlock className="border-l-2 border-l-red-500 bg-red-950/20 hover:bg-red-950/40">
+                <span className="text-red-400 font-bold">PR-AUC &lt; 0.15</span> <span className="text-slate-500 px-2">→</span>
+                <span className="text-slate-300">ModelQualityError raised</span> <span className="text-slate-500 px-2">→</span> pipeline stops
+              </InnerBlock>
+              <InnerBlock className="border-l-2 border-l-green-500 bg-green-950/20 hover:bg-green-950/40">
+                <span className="text-green-400 font-bold">PR-AUC &gt;= 0.15</span> <span className="text-slate-500 px-2">→</span>
+                <span className="text-slate-300">artifact saved, proceed to CI/CD</span>
+              </InnerBlock>
+            </div>
+          </FlowNode>
+
+          <FlowEdge activeStep={activeStep === 'quality' || activeStep === 'cicd'}>
+            <GitBranch className="w-4 h-4" /> GitHub Actions (on push to main)
+          </FlowEdge>
+
+          <FlowNode id="cicd" title="CI/CD (GitHub Actions)" icon={GitBranch} colorClass="border-amber-500/50 text-amber-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <div className="space-y-3">
+              <InnerBlock title="train.yml" icon={PlaySquare} className="border-l-2 border-l-amber-500 hover:border-l-4">
+                train model → upload artifact <span className="text-amber-200/50 text-xs">(models/ + run_id.txt)</span>
+              </InnerBlock>
+
+              <InnerBlock title="ci-cd.yml" icon={Terminal} className="border-l-2 border-l-amber-500 hover:border-l-4">
+                <div className="mb-2 text-amber-100/70 text-xs flex flex-wrap gap-2 items-center">
+                  <span>download artifact</span> → <span>lint</span> → <span>unit tests</span> → <span>Docker build</span> → <span>integration tests <span className="text-amber-400">(live container)</span></span> → <span>push to GHCR</span>
+                </div>
+                <div className="bg-slate-900/80 p-2 rounded text-xs text-slate-400 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                  <span className="text-slate-300">ghcr.io/org/repo:latest</span> <span className="text-slate-500">(Render auto-deploy)</span>
+                  <span className="text-slate-300">ghcr.io/org/repo:&lt;sha7&gt;</span> <span className="text-slate-500">(rollback snapshot)</span>
+                </div>
+              </InnerBlock>
+            </div>
+          </FlowNode>
+
+          <FlowEdge activeStep={activeStep === 'cicd' || activeStep === 'production'}>
+            Render polls GHCR for :latest
+          </FlowEdge>
+
+          <FlowNode id="production" title="PRODUCTION (Render.com)" icon={Server} colorClass="border-rose-500/50 text-rose-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <div className="space-y-3">
+              <InnerBlock title="Docker Container via Uvicorn" icon={Container} className="border-l-2 border-l-rose-500 hover:border-l-4">
+                <div className="text-rose-200 mb-2 border-b border-rose-900/30 pb-2">app.py via uvicorn</div>
+                <div className="space-y-2 text-xs md:text-sm text-slate-300">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-rose-300">GET /health</span>
+                    <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-rose-300">POST /predict</span>
+                    <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-rose-300">POST /predict/batch</span>
+                  </div>
+                  <div className="pt-1 text-slate-400">
+                    SHAP per prediction <span className="text-slate-600 px-1">|</span> prediction logging <span className="text-slate-600 px-1">|</span> CORS
+                  </div>
+                </div>
+              </InnerBlock>
+
+              <InnerBlock title="Public Endpoint" icon={Globe} className="border-l-2 border-l-rose-500 hover:border-l-4">
+                <a href="https://hospital-prediction-system.onrender.com/docs" target="_blank" className="text-rose-300 text-xs md:text-sm break-all font-bold tracking-wide hover:text-rose-200 underline">
+                  https://hospital-prediction-system.onrender.com
+                </a>
+              </InnerBlock>
+            </div>
+          </FlowNode>
+
+          <FlowEdge activeStep={activeStep === 'production' || activeStep === 'ui'}>
+            HTTP POST /predict
+          </FlowEdge>
+
+          <FlowNode id="ui" title="USER INTERFACES" icon={MonitorPlay} colorClass="border-cyan-500/50 text-cyan-400" expandedNodes={expandedNodes} toggleNode={toggleNode} activeStep={activeStep}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InnerBlock title="Streamlit" icon={LayoutDashboard} className="border-l-2 border-l-cyan-500 hover:border-l-4 flex flex-col h-full">
+                <div className="text-slate-400 text-xs mb-1 font-mono">(Python requests → FastAPI)</div>
+                <a href="https://hospital-prediction-system.streamlit.app" target="_blank" className="text-cyan-400 text-xs mb-3 break-all font-bold hover:text-cyan-300 underline">
+                  hospital-prediction-system.streamlit.app
+                </a>
+                <div className="text-xs md:text-sm text-slate-300 mt-auto pt-2 border-t border-cyan-900/30">
+                  Patient intake <span className="text-slate-600 px-1">|</span> batch scoring <span className="text-slate-600 px-1">|</span> monitoring
+                </div>
+              </InnerBlock>
+
+              <InnerBlock title="React + Node.js" icon={AppWindow} className="border-l-2 border-l-cyan-500 hover:border-l-4 flex flex-col h-full">
+                <div className="text-slate-400 text-xs mb-1 font-mono">(browser → Node.js proxy → FastAPI)</div>
+                <a href="https://hospital-prediction-system-1.onrender.com" target="_blank" className="text-cyan-400 text-xs mb-3 break-all font-bold hover:text-cyan-300 underline">
+                  hospital-prediction-system-1.onrender.com
+                </a>
+                <div className="text-xs md:text-sm text-slate-300 mt-auto pt-2 border-t border-cyan-900/30">
+                  Login, Dashboard, Intake, Batch, Monitoring
+                </div>
+              </InnerBlock>
+            </div>
+          </FlowNode>
+
+          <div className="h-16"></div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+
+</body>
+</html>
