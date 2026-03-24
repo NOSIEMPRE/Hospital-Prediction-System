@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { motion } from 'framer-motion';
 import { UploadCloud, FileSpreadsheet, Download, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageTransition from '../components/layout/PageTransition';
@@ -113,7 +112,7 @@ export default function Batch() {
         </div>
 
         {file && results.length === 0 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 glass-card p-6 flex justify-between items-center bg-accent/5 border border-accent/20">
+            <div className="mt-8 glass-card p-6 flex justify-between items-center bg-accent/5 border border-accent/20">
               <div className="flex items-center gap-5">
                 <div className="p-3 bg-accent/10 rounded-xl text-accent">
                   <FileSpreadsheet size={28} />
@@ -126,11 +125,11 @@ export default function Batch() {
               <GlowButton onClick={processBatch} disabled={loading} className="min-w-[160px]">
                 {loading ? <RefreshCw className="animate-spin" size={20} /> : 'Execute Batch'}
               </GlowButton>
-            </motion.div>
+            </div>
           )}
 
           {results.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-12 glass-card overflow-hidden border border-white/5 shadow-2xl">
+            <div className="mt-12 glass-card overflow-hidden border border-white/5 shadow-2xl">
                <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
                  <div className="flex items-center gap-3">
                    <CheckCircle2 size={24} className="text-accent" />
@@ -181,7 +180,7 @@ export default function Batch() {
                    </tbody>
                  </table>
                </div>
-            </motion.div>
+            </div>
           )}
       </div>
     </PageTransition>

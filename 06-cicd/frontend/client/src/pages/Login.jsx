@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { User, ShieldCheck, ArrowRight, BrainCircuit, Activity } from 'lucide-react';
 import useAppStore from '../store/appStore';
 
@@ -21,11 +20,7 @@ export default function Login() {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
 
       <div className="relative z-10 w-full max-w-4xl">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
+        <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-[0.2em] mb-4">
             <Activity size={12} /> Secure Inference Gateway
           </div>
@@ -35,15 +30,13 @@ export default function Login() {
           <p className="text-text-muted text-lg font-light">
             Select your authorized clinical identity to access the predictive dashboard.
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {DOCTORS.map((doc, idx) => (
-            <motion.button
+          {DOCTORS.map((doc) => (
+            <button
+              type="button"
               key={doc.id}
-              initial={{ opacity: 0, x: idx === 0 ? -30 : 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 + idx * 0.1 }}
               onClick={() => login(doc.id)}
               className="group relative flex flex-col items-center p-8 rounded-3xl bg-surface/40 border border-white/5 hover:border-accent/40 transition-all hover:shadow-[0_0_50px_rgba(0,229,192,0.1)] backdrop-blur-xl"
             >
@@ -70,20 +63,15 @@ export default function Login() {
               </div>
 
               <div className="absolute inset-x-0 bottom-0 h-1 bg-accent scale-x-0 group-hover:scale-x-100 transition-transform origin-center"></div>
-            </motion.button>
+            </button>
           ))}
         </div>
 
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="mt-16 flex justify-center items-center gap-8 text-text-muted/40 uppercase text-[9px] font-bold tracking-[0.3em]"
-        >
+        <div className="mt-16 flex justify-center items-center gap-8 text-text-muted/40 uppercase text-[9px] font-bold tracking-[0.3em]">
           <div className="flex items-center gap-2"><BrainCircuit size={14} /> Neural-Powered</div>
           <div className="flex items-center gap-2"><ShieldCheck size={14} /> HIPAA Compliant</div>
           <div className="flex items-center gap-2"><Activity size={14} /> Zero Trust Architecture</div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
