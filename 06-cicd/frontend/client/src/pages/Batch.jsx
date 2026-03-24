@@ -6,8 +6,10 @@ import PageTransition from '../components/layout/PageTransition';
 import GlowButton from '../components/ui/GlowButton';
 import RiskBadge from '../components/ui/RiskBadge';
 import api from '../api/client';
+import useAppStore from '../store/appStore';
 
 export default function Batch() {
+  const { addNotification, settings } = useAppStore();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
@@ -67,9 +69,19 @@ export default function Batch() {
            patients.length = 50; 
         }
 
-        const { data } = await api.post('/batch', patients);
-        setResults(data);
+        const { data } = await api.post('/predict/batch', patients);
+        setResults(data.map((d, i) => ({ ...d, id: patients[i]?.id || `ROW-${i + 1}` })));
         toast.success(`Processed ${data.length} patients successfully`);
+
+        // Fire batch complete notification
+        if (settings.notifications.batchComplete) {
+          addNotification({
+            type: 'success',
+            title: 'Batch Processing Complete',
+            message: `${data.length} patients processed successfully`,
+            priority: 'medium',
+          });
+        }
       } catch (err) {
         toast.error(err.message || 'Batch failed');
       } finally {

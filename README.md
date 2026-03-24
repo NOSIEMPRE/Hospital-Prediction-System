@@ -13,7 +13,8 @@ This project builds a machine learning system to predict 30-day readmission risk
 - **Dataset**: Diabetes 130-US Hospitals (UCI ML Repository, id 296) — Strack et al., 2014
 - **Target**: Binary classification — readmitted within 30 days (yes/no)
 - **Model**: XGBoost pipeline tracked with MLflow, quality-gated (PR-AUC ≥ 0.15)
-- **Deployment**: FastAPI, Streamlit, and the React + Node stack can be deployed to Render (see `render.yaml` and CI/CD). **For project review and demos, please run the stack locally** using [Quick Start](#quick-start) below — Render’s **free tier** may spin down, cold-start slowly, or return gateway errors (e.g. 502/520), so we do **not** publish live URLs here.
+- **Data Versioning**: DVC tracks raw and processed datasets (`data/diabetic_data.csv.dvc`, `data/processed.dvc`)
+- **Deployment**: FastAPI, Streamlit, and the React + Node stack can be deployed to Render or **Hugging Face Spaces** (see `Dockerfile.hf` and `.github/workflows/deploy-hf.yml`). **For project review and demos, please run the stack locally** using [Quick Start](#quick-start) below — Render’s **free tier** may spin down, cold-start slowly, or return gateway errors (e.g. 502/520), so we do **not** publish live URLs here.
 - **Walkthrough**: [WALKTHROUGH_EN.md](WALKTHROUGH_EN.md)
 
 ---
@@ -58,17 +59,22 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 │   │   └── predictions.log        # Append-only prediction audit log (CSV)
 │   ├── models/                    # Saved MLflow model artifact
 │   └── frontend/                  # React + Node.js dashboard
-│       ├── client/                # Vite + React (5 pages)
-│       ├── server/                # Express proxy (Node.js)
+│       ├── client/                # Vite + React (7 pages, 6 settings tabs)
+│       ├── server/                # Express proxy (Node.js, production)
 │       ├── Dockerfile
 │       └── docker-compose.yml
 ├── .github/workflows/
 │   ├── ci-cd.yml                  # Main pipeline (lint → test → build → deploy)
-│   └── train.yml                  # Reusable training job
+│   ├── train.yml                  # Reusable training job
+│   └── deploy-hf.yml             # Hugging Face Spaces deployment
 ├── data/
 │   ├── diabetic_data.csv          # Raw dataset (download from UCI)
+│   ├── diabetic_data.csv.dvc      # DVC tracking file
+│   ├── processed.dvc              # DVC tracking for processed data
 │   ├── IDS_mapping.csv
 │   └── processed/                 # train.csv, val.csv, test.csv
+├── docker-compose.yml             # Full stack: Postgres + MLflow + FastAPI + Frontend
+├── Dockerfile.hf                  # Hugging Face Spaces deployment image
 ├── render.yaml                    # Render.com deployment config
 ├── WALKTHROUGH_EN.md              # Full technical walkthrough
 └── README.md
@@ -87,10 +93,12 @@ Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 | Unit + integration tests | ✅ |
 | Dockerfile | ✅ |
 | CI/CD workflow (lint → test → build → push) | ✅ |
+| DVC data versioning (`data/*.dvc`) | ✅ |
+| Remote MLflow tracking server (Postgres + docker-compose) | ✅ |
 | Render deployment manifest (`render.yaml`) | ✅ |
-| Optional cloud deploy (Render; free tier unreliable for live demos) | ✅ |
+| Hugging Face Spaces deployment (`Dockerfile.hf`, `deploy-hf.yml`) | ✅ |
 | Streamlit clinical dashboard | ✅ |
-| React + Node.js full-stack frontend | ✅ |
+| React + Node.js full-stack frontend (7 pages, 6 settings tabs) | ✅ |
 
 ---
 
@@ -213,17 +221,13 @@ The sidebar lets you switch between **Local API** (`http://localhost:9696`, requ
 
 ### 6. Run React frontend
 
-The React frontend uses a 3-layer architecture. All 3 processes must be running at the same time:
+For local development, only 2 terminals are needed — the Vite dev server proxies API calls directly to FastAPI:
 
 ```text
-Browser (5173) → Node.js proxy (3001) → FastAPI (9696)
+Browser (5173) → Vite proxy → FastAPI (9696)
 ```
 
-No need to clone again — open 3 separate terminal windows and `cd` into the same local folder from each.
-
 #### Terminal 1 — FastAPI ML API (keep running from step 4)
-
-Serves the machine learning model and handles predictions.
 
 ```bash
 cd 06-cicd
@@ -231,29 +235,7 @@ python app.py
 # → http://localhost:9696
 ```
 
-#### Terminal 2 — Node.js proxy (backend middleware)
-
-Sits between the React UI and FastAPI. Handles request forwarding, CORS, and error handling. The React app never calls FastAPI directly.
-
-Before starting, create the environment file:
-
-```bash
-cd 06-cicd/frontend/server
-echo 'ML_API_URL=http://localhost:9696' > .env
-```
-
-Then start the proxy:
-
-```bash
-npm install
-npm run dev
-# → http://localhost:3001
-# You should see: 📡 ML API: http://localhost:9696
-```
-
-#### Terminal 3 — React client (UI)
-
-Renders the frontend pages in the browser. Sends all API calls to the Node.js proxy, not to FastAPI.
+#### Terminal 2 — React client (UI)
 
 ```bash
 cd 06-cicd/frontend/client
@@ -261,6 +243,10 @@ npm install
 npm run dev
 # → Open http://localhost:5173 in your browser
 ```
+
+The Vite config includes a proxy that forwards `/api/*` to `http://localhost:9696`, so no Express server is needed for local dev.
+
+> **Production**: In Docker/Render, the Express proxy (`server/`) sits between the React build and FastAPI (see `docker-compose.yml`).
 
 ### 7. Deploy to Render (CI/CD)
 
@@ -271,9 +257,34 @@ Render deployment is triggered automatically by the CI/CD pipeline on every push
 
 The pipeline runs: lint → train → test → build Docker image → push to GHCR → deploy to Render.
 
-**Cloud URLs** are managed in the Render dashboard (they can change between deploys). We intentionally **do not list production links in this README**: on the **free tier**, services sleep after inactivity, cold starts can take ~30–60+ seconds, and **Run Assessment** or other routes may intermittently return **502/520** — fine for development, but unreliable for graders opening a link during review. Use the **local Quick Start** above for a stable demo.
+### 8. Deploy to Hugging Face Spaces (alternative)
 
-### 8. Run Evidently monitoring report
+If Render's free tier is too small, the project can be deployed to Hugging Face Spaces:
+
+1. Create a new HF Space (Docker SDK)
+2. Add `HF_TOKEN` to your GitHub repo secrets
+3. Set `HF_SPACE_NAME` repo variable (e.g., `your-username/Hospital-Prediction-System`)
+4. The `deploy-hf.yml` workflow auto-deploys after successful CI/CD
+5. Or push manually: `git push hf main`
+
+The `Dockerfile.hf` runs both FastAPI and the React frontend in a single container using supervisord.
+
+### 9. DVC data versioning
+
+Data files are tracked with DVC. To pull data after cloning:
+
+```bash
+dvc pull
+```
+
+To track new data changes:
+
+```bash
+dvc add data/diabetic_data.csv
+git add data/diabetic_data.csv.dvc
+```
+
+### 10. Run Evidently monitoring report
 
 Evidently generates a static HTML report comparing training data distribution against production traffic. It does **not** require a running server.
 

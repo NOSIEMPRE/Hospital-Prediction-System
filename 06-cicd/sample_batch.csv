@@ -1,0 +1,4 @@
+time_in_hospital,num_lab_procedures,num_procedures,num_medications,number_emergency,number_inpatient,number_outpatient,number_diagnoses,admission_type_id,discharge_disposition_id,admission_source_id,age,gender,race,change,diabetesMed,A1Cresult,max_glu_serum
+3,41,0,8,0,0,0,9,1,1,7,[50-60),Female,Caucasian,No,No,not_tested,not_tested
+5,60,2,15,1,2,1,7,2,1,7,[70-80),Male,AfricanAmerican,Ch,Yes,>8,>300
+1,20,1,5,0,0,0,3,1,1,7,[30-40),Female,Hispanic,No,No,Norm,Norm

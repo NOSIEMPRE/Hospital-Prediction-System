@@ -26,7 +26,7 @@ export default function Intake() {
   const [formData, setFormData] = useState(initForm);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const { addPrediction } = useAppStore();
+  const { addPrediction, addNotification, settings } = useAppStore();
 
   const handleNext = () => setStep(s => Math.min(s + 1, 2));
   const handlePrev = () => setStep(s => Math.max(s - 1, 0));
@@ -56,8 +56,20 @@ export default function Intake() {
 
       const { data } = await api.post('/predict', payload);
       setResult(data);
-      addPrediction({ id: `PT-${Math.floor(Math.random()*9000)+1000}`, score: data.risk_score, label: data.risk_label });
+      const patientId = `PT-${Math.floor(Math.random()*9000)+1000}`;
+      const riskLabel = data.risk_score >= 0.6 ? 'High' : data.risk_score >= 0.3 ? 'Moderate' : 'Low';
+      addPrediction({ id: patientId, score: data.risk_score, label: riskLabel });
       toast.success('Assessment complete');
+
+      // Fire high-risk notification
+      if (data.risk_score >= settings.notifications.riskThreshold && settings.notifications.criticalRisk) {
+        addNotification({
+          type: 'alert',
+          title: 'High Risk Alert',
+          message: `Patient ${patientId} scored ${(data.risk_score * 100).toFixed(0)}% readmission risk`,
+          priority: 'high',
+        });
+      }
     } catch (err) {
       const msg =
         err.response?.data?.error ||

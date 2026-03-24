@@ -8,6 +8,7 @@ Added features: automated quality gate. Missing data strictly halts the pipeline
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -68,7 +69,7 @@ def load_config() -> dict:
             f"Config file not found at {_CONFIG_PATH}. "
             "Ensure config.yaml exists in the 06-cicd/ directory."
         )
-    with open(_CONFIG_PATH) as f:
+    with open(_CONFIG_PATH, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -175,7 +176,13 @@ def train_and_log(
     seed = cfg.get("seed", 42)
     min_pr_auc = model_cfg.get("min_pr_auc", 0.10)
 
-    tracking_uri = f"sqlite:///{_SCRIPT_DIR / mlflow_cfg['db']}"
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
+    if not tracking_uri:
+        remote_uri = mlflow_cfg.get("remote_tracking_uri")
+        if remote_uri:
+            tracking_uri = remote_uri
+        else:
+            tracking_uri = f"sqlite:///{_SCRIPT_DIR / mlflow_cfg['db']}"
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(mlflow_cfg["experiment_name"])
 

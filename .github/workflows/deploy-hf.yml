@@ -1,0 +1,32 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE_NAME || 'NOSIEMPRE/Hospital-Prediction-System' }}
+        run: |
+          git remote add hf https://huggingface.co/spaces/$HF_SPACE || true
+          git remote set-url hf https://huggingface.co/spaces/$HF_SPACE
+
+          # Configure git for HF push
+          git config http.https://huggingface.co/.extraHeader "Authorization: Bearer $HF_TOKEN"
+
+          # Push to HF Spaces (which triggers a rebuild)
+          git push hf main --force

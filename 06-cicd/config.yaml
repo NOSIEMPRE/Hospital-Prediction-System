@@ -13,6 +13,8 @@ mlflow:
   # SQLite DB filename stored inside 06-cicd/
   db: "mlflow.db"
   experiment_name: "hospital-readmission-risk"
+  # Optional: point to remote MLflow server (docker-compose)
+  remote_tracking_uri: "http://localhost:5001"
 
 # ── XGBoost hyperparameters ───────────────────────────────────────────────────
 model:

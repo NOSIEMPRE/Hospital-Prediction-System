@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Activity, LayoutDashboard, FileUp, ShieldAlert, ChevronLeft, ChevronRight, Server } from 'lucide-react';
+import { Activity, LayoutDashboard, FileUp, ShieldAlert, ChevronLeft, ChevronRight, Server, Settings as SettingsIcon, Bell } from 'lucide-react';
 import useAppStore from '../../store/appStore';
 
 const NavItem = ({ to, icon: Icon, label, isExpanded }) => (
@@ -46,6 +46,8 @@ export default function Sidebar() {
           <NavItem to="/intake" icon={Activity} label="Patient Intake" isExpanded={isSidebarOpen} />
           <NavItem to="/batch" icon={FileUp} label="Batch Processing" isExpanded={isSidebarOpen} />
           <NavItem to="/monitoring" icon={ShieldAlert} label="Monitoring" isExpanded={isSidebarOpen} />
+          <NavItem to="/notifications" icon={Bell} label="Notifications" isExpanded={isSidebarOpen} />
+          <NavItem to="/settings" icon={SettingsIcon} label="Settings" isExpanded={isSidebarOpen} />
         </nav>
       </div>
 
