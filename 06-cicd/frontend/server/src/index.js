@@ -36,7 +36,7 @@ app.use('/api/batch', batchRouter);
 if (process.env.NODE_ENV === 'production') {
   const clientDist = join(__dirname, '..', '..', 'client', 'dist');
   app.use(express.static(clientDist));
-  app.get('*', (_, res) => res.sendFile(join(clientDist, 'index.html')));
+  app.get(/(.*)/, (_, res) => res.sendFile(join(clientDist, 'index.html')));
 }
 
 // --- Error Handler ---
