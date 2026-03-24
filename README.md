@@ -13,7 +13,9 @@ This project builds a machine learning system to predict 30-day readmission risk
 - **Dataset**: Diabetes 130-US Hospitals (UCI ML Repository, id 296) — Strack et al., 2014
 - **Target**: Binary classification — readmitted within 30 days (yes/no)
 - **Model**: XGBoost pipeline tracked with MLflow, quality-gated (PR-AUC ≥ 0.15)
-- **Live API docs**: [hospital-readmission-risk-predictor-pcv7.onrender.com/docs](https://hospital-readmission-risk-predictor-pcv7.onrender.com/docs)
+- **Live API docs**: [hospital-prediction-system.onrender.com/docs](https://hospital-prediction-system.onrender.com/docs)
+- **Streamlit dashboard**: [hospital-prediction-system.streamlit.app](https://hospital-prediction-system.streamlit.app)
+- **React platform**: [hospital-prediction-system-1.onrender.com](https://hospital-prediction-system-1.onrender.com)
 - **Walkthrough**: [WALKTHROUGH_EN.md](WALKTHROUGH_EN.md)
 
 ---
@@ -271,11 +273,13 @@ Render deployment is triggered automatically by the CI/CD pipeline on every push
 
 The pipeline runs: lint → train → test → build Docker image → push to GHCR → deploy to Render.
 
-**Live API** (no local setup required):
+**Live services** (no local setup required):
 
 ```text
-https://hospital-readmission-risk-predictor-pcv7.onrender.com/health
-https://hospital-readmission-risk-predictor-pcv7.onrender.com/docs
+https://hospital-prediction-system.onrender.com/health       ← FastAPI
+https://hospital-prediction-system.onrender.com/docs         ← API docs
+https://hospital-prediction-system.streamlit.app             ← Streamlit dashboard
+https://hospital-prediction-system-1.onrender.com            ← React platform
 ```
 
 > Note: Render free tier has a cold-start delay of ~30–60 seconds after periods of inactivity.
