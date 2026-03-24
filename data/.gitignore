@@ -1,1 +1,1 @@
-/processed
+# DVC tracks these files, but they're also kept in git for CI compatibility
