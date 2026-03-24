@@ -4,6 +4,12 @@ RUN apt-get update -qq && apt-get install -y -qq unzip && rm -rf /var/lib/apt/li
 
 WORKDIR /app
 
+# Free-tier containers are tiny; unlimited BLAS/OpenMP threads often triggers OOM/SIGSEGV (exit 139).
+ENV OMP_NUM_THREADS=1
+ENV OPENBLAS_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV NUMEXPR_NUM_THREADS=1
+
 # Copy and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
