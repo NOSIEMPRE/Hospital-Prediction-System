@@ -124,7 +124,7 @@ export default function Intake() {
 
         <AnimatePresence mode="wait">
           {!result ? (
-            <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -20, scale: 0.98 }}>
+            <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="flex items-center justify-between mb-12 max-w-2xl mx-auto relative px-4">
                 {Steps.map((name, i) => (
                   <div key={name} className="flex flex-col items-center relative z-10">
