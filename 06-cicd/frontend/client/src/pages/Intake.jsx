@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Check, ChevronRight, ChevronLeft, ArrowRight, ShieldAlert } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
@@ -122,9 +122,8 @@ export default function Intake() {
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-heading font-bold mb-8 text-glow">New Patient Assessment</h1>
 
-        <AnimatePresence mode="wait">
-          {!result ? (
-            <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        {!result ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="flex items-center justify-between mb-12 max-w-2xl mx-auto relative px-4">
                 {Steps.map((name, i) => (
                   <div key={name} className="flex flex-col items-center relative z-10">
@@ -272,7 +271,6 @@ export default function Intake() {
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
       </div>
     </PageTransition>
   );
