@@ -5,6 +5,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Per-request timeout overrides this (e.g. /health uses 20s in App.jsx)
+  timeout: 130_000,
 });
 
 export default api;

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import os
 import numpy as np
 import time
 import uuid
@@ -28,6 +29,24 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def _shap_on_predict_enabled() -> bool:
+    """TreeExplainer SHAP is heavy (RAM + CPU). On Render this often causes 502/OOM.
+
+    - Set ENABLE_SHAP_ON_PREDICT=true to force SHAP on.
+    - Set DISABLE_SHAP=true to force SHAP off (any host).
+    - On Render (RENDER=true), SHAP is off unless ENABLE_SHAP_ON_PREDICT is set.
+    """
+    env = os.environ
+    if env.get("DISABLE_SHAP", "").lower() in ("1", "true", "yes"):
+        return False
+    if env.get("ENABLE_SHAP_ON_PREDICT", "").lower() in ("1", "true", "yes"):
+        return True
+    if env.get("RENDER", "").lower() in ("true", "1", "yes"):
+        return False
+    return True
+
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _CONFIG_PATH = _SCRIPT_DIR / "config.yaml"
@@ -266,54 +285,57 @@ def predict(patient: PatientRequest, request: Request):
         feature_dict = patient.model_dump()
         pred_proba = model.predict_proba([feature_dict])[0, 1]
 
-        # Calculate Explainable AI (SHAP)
+        # Calculate Explainable AI (SHAP) — optional; skipped on Render by default
         shap_output = None
         base_value = None
-        try:
-            import shap
-            vectorizer = model.named_steps["vectorizer"]
-            classifier = model.named_steps["classifier"]
+        if _shap_on_predict_enabled():
+            try:
+                import shap
+                vectorizer = model.named_steps["vectorizer"]
+                classifier = model.named_steps["classifier"]
 
-            # Extract features as dict for SHAP calculation
-            feature_matrix = vectorizer.transform([feature_dict]).toarray()
-            explainer = shap.TreeExplainer(classifier)
-            shap_result = explainer.shap_values(feature_matrix)
+                # Extract features as dict for SHAP calculation
+                feature_matrix = vectorizer.transform([feature_dict]).toarray()
+                explainer = shap.TreeExplainer(classifier)
+                shap_result = explainer.shap_values(feature_matrix)
 
-            # Extract SHAP values - handle different SHAP output formats (v0.4x)
-            if isinstance(shap_result, list):
-                # Binary classification [neg_class_shap, pos_class_shap]
-                if len(shap_result) > 1:
-                    shap_raw = shap_result[1][0]
+                # Extract SHAP values - handle different SHAP output formats (v0.4x)
+                if isinstance(shap_result, list):
+                    # Binary classification [neg_class_shap, pos_class_shap]
+                    if len(shap_result) > 1:
+                        shap_raw = shap_result[1][0]
+                    else:
+                        shap_raw = shap_result[0][0]
+                elif isinstance(shap_result, np.ndarray) and \
+                        len(shap_result.shape) == 3:
+                    # Some versions return (n_samples, n_features, n_classes)
+                    if shap_result.shape[2] > 1:
+                        shap_raw = shap_result[0, :, 1]
+                    else:
+                        shap_raw = shap_result[0, :, 0]
                 else:
-                    shap_raw = shap_result[0][0]
-            elif isinstance(shap_result, np.ndarray) and \
-                    len(shap_result.shape) == 3:
-                # Some versions return (n_samples, n_features, n_classes)
-                if shap_result.shape[2] > 1:
-                    shap_raw = shap_result[0, :, 1]
-                else:
-                    shap_raw = shap_result[0, :, 0]
-            else:
-                shap_raw = shap_result[0]
+                    shap_raw = shap_result[0]
 
-            # Extract base value appropriately
-            expected_val = explainer.expected_value
-            if isinstance(expected_val, (list, tuple, np.ndarray)):
-                expected_val = expected_val[-1]
-            base_value = float(expected_val)
+                # Extract base value appropriately
+                expected_val = explainer.expected_value
+                if isinstance(expected_val, (list, tuple, np.ndarray)):
+                    expected_val = expected_val[-1]
+                base_value = float(expected_val)
 
-            # Extract top 10 features for interpretation
-            top_indices = np.argsort(np.abs(shap_raw))[-10:][::-1]
-            _ = top_indices  # Explicitly used for alignment
-            feature_names = vectorizer.dv.get_feature_names_out()
-            shap_dict = {
-                str(k): float(v)
-                for k, v in zip(feature_names, shap_raw)
-                if abs(v) > 0.001
-            }
-            shap_output = shap_dict
-        except Exception as e:
-            logger.warning("SHAP calculation skipped: %s", e)
+                # Extract top 10 features for interpretation
+                top_indices = np.argsort(np.abs(shap_raw))[-10:][::-1]
+                _ = top_indices  # Explicitly used for alignment
+                feature_names = vectorizer.dv.get_feature_names_out()
+                shap_dict = {
+                    str(k): float(v)
+                    for k, v in zip(feature_names, shap_raw)
+                    if abs(v) > 0.001
+                }
+                shap_output = shap_dict
+            except Exception as e:
+                logger.warning("SHAP calculation skipped: %s", e)
+        else:
+            logger.info("SHAP on /predict disabled for this environment")
 
         # Log to data exhaust
         request_id = request.headers.get("X-Request-ID", "unknown")
@@ -346,40 +368,41 @@ def predict_batch(patients: list[PatientRequest], request: Request):
             feature_dict = patient.model_dump()
             pred_proba = model.predict_proba([feature_dict])[0, 1]
 
-            # Simple shap for batch
+            # Simple shap for batch (same env gate as /predict)
             shap_output = None
-            try:
-                import shap
-                vectorizer = model.named_steps["vectorizer"]
-                classifier = model.named_steps["classifier"]
-                feature_matrix = vectorizer.transform([feature_dict]).toarray()
-                explainer = shap.TreeExplainer(classifier)
-                shap_result = explainer.shap_values(feature_matrix)
+            if _shap_on_predict_enabled():
+                try:
+                    import shap
+                    vectorizer = model.named_steps["vectorizer"]
+                    classifier = model.named_steps["classifier"]
+                    feature_matrix = vectorizer.transform([feature_dict]).toarray()
+                    explainer = shap.TreeExplainer(classifier)
+                    shap_result = explainer.shap_values(feature_matrix)
 
-                # Extract SHAP values (v0.4x)
-                if isinstance(shap_result, list):
-                    if len(shap_result) > 1:
-                        shap_raw = shap_result[1][0]
+                    # Extract SHAP values (v0.4x)
+                    if isinstance(shap_result, list):
+                        if len(shap_result) > 1:
+                            shap_raw = shap_result[1][0]
+                        else:
+                            shap_raw = shap_result[0][0]
+                    elif isinstance(shap_result, np.ndarray) and \
+                            len(shap_result.shape) == 3:
+                        if shap_result.shape[2] > 1:
+                            shap_raw = shap_result[0, :, 1]
+                        else:
+                            shap_raw = shap_result[0, :, 0]
                     else:
-                        shap_raw = shap_result[0][0]
-                elif isinstance(shap_result, np.ndarray) and \
-                        len(shap_result.shape) == 3:
-                    if shap_result.shape[2] > 1:
-                        shap_raw = shap_result[0, :, 1]
-                    else:
-                        shap_raw = shap_result[0, :, 0]
-                else:
-                    shap_raw = shap_result[0]
+                        shap_raw = shap_result[0]
 
-                feature_names = vectorizer.dv.get_feature_names_out()
-                shap_dict = {
-                    str(k): float(v)
-                    for k, v in zip(feature_names, shap_raw)
-                    if abs(v) > 0.001
-                }
-                shap_output = shap_dict
-            except Exception:
-                pass
+                    feature_names = vectorizer.dv.get_feature_names_out()
+                    shap_dict = {
+                        str(k): float(v)
+                        for k, v in zip(feature_names, shap_raw)
+                        if abs(v) > 0.001
+                    }
+                    shap_output = shap_dict
+                except Exception:
+                    pass
 
             results.append(PredictionResponse(
                 risk_score=float(pred_proba),

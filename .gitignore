@@ -25,6 +25,9 @@ data/diabetic_data.csv
 # Secrets file (if you ever use one)
 .env
 
+# Background process logs
+nohup.out
+
 # IDE / OS specific
 .vscode/
 .idea/
@@ -41,3 +44,4 @@ docs/Proposal_补充与修改建议.md
 docs/Proposal_vs_Assignment_Checklist.md
 node_modules
 PRESENTATION_SCRIPT.md
+PRESENTATION_SCRIPT_6MIN.md

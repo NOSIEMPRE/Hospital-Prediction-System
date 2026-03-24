@@ -16,7 +16,7 @@ export default function App() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const { data } = await api.get('/health', { timeout: 3000 });
+        const { data } = await api.get('/health', { timeout: 20000 });
         setApiHealth({ status: data.status, model_loaded: data.model_loaded, latency_ms: data.latency_ms });
       } catch {
         setApiHealth({ status: 'offline', model_loaded: false, latency_ms: 0 });

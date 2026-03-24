@@ -58,7 +58,12 @@ export default function Intake() {
       addPrediction({ id: `PT-${Math.floor(Math.random()*9000)+1000}`, score: data.risk_score, label: data.risk_label });
       toast.success('Assessment complete');
     } catch (err) {
-      toast.error(err.response?.data?.detail || err.message || 'Prediction failed');
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        err.message ||
+        'Prediction failed';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
