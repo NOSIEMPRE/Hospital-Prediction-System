@@ -23,6 +23,8 @@ jobs:
 
       - name: Train model
         working-directory: 06-cicd
+        env:
+          MLFLOW_TRACKING_URI: "sqlite:///mlflow.db"
         run: python train.py
 
       - name: Verify artifact contents
