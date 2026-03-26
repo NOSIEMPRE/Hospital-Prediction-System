@@ -1,4 +1,4 @@
-# IE-MLOps-Group-Project-Team3
+# Hospital Readmission Prediction System
 
 **Hospital Readmission Risk Prediction** — An end-to-end MLOps system for proactive patient care.
 
@@ -16,12 +16,6 @@ This project builds a machine learning system to predict 30-day readmission risk
 - **Data Versioning**: DVC tracks raw and processed datasets (`data/diabetic_data.csv.dvc`, `data/processed.dvc`)
 - **Deployment**: FastAPI, Streamlit, and the React + Node stack can be deployed to Render or **Hugging Face Spaces** (see `Dockerfile.hf` and `.github/workflows/deploy-hf.yml`). **For project review and demos, please run the stack locally** using [Quick Start](#quick-start) below — Render’s **free tier** may spin down, cold-start slowly, or return gateway errors (e.g. 502/520), so we do **not** publish live URLs here.
 - **Walkthrough**: [WALKTHROUGH_EN.md](WALKTHROUGH_EN.md)
-
----
-
-## Team
-
-Marian, Marco, Yaxin, Lorenz, Jorge, Omar
 
 ---
 
